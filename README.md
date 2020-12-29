@@ -1,0 +1,1 @@
+# Strain-gauges-recognition
