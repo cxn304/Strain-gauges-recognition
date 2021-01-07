@@ -10,6 +10,8 @@ __pycache__/
 .Python
 build/
 labels/
+cali_img/
+internal_reference/
 develop-eggs/
 dist/
 downloads/
