@@ -1,11 +1,10 @@
 '''
 author: cxn
 version: 0.1.0
-图像拼接
+camera calibration
 '''
 
 import numpy as np
-import argparse
 import cv2, os, glob
 import matplotlib.pyplot as plt
 
@@ -54,6 +53,7 @@ def my_calibrate(x_nums = 11,y_nums = 11, chess_len = 10):
     尽可能使标定板平面与相机垂直
 
     """
+    plt.rcParams['figure.dpi'] = 100
     # x,y方向上的角点个数
     # 设置(生成)标定图在世界坐标中的坐标
     world_point = np.zeros((x_nums * y_nums, 3), np.float32)  
@@ -65,7 +65,7 @@ def my_calibrate(x_nums = 11,y_nums = 11, chess_len = 10):
     image_position = [] #存放棋盘角点对应的图片像素坐标
     # 设置世界坐标的坐标
     axis = chess_len * np.float32(
-        [[3, 0, 0], [0, 3, 0], [1, 0, 0]]).reshape(-1, 3)  
+        [[3, 0, 0], [0, 3, 0], [1, 0, 0],[0,2,0]]).reshape(-1, 3)  
     # axis列数为3表示xyz,行数不知,表示要画几个点
     # 设置角点查找限制
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -117,12 +117,13 @@ def my_calibrate(x_nums = 11,y_nums = 11, chess_len = 10):
         # 函数projectPoints()根据所给的3D坐标和已知的几何变换来求解投影后的2D坐标
         imgpts, jac = cv2.projectPoints(axis, rvec0, tvec0, mtx, dist)
         imageht = cv2.imread(image_paths[i])
-        imagehuatu = cv2.drawChessboardCorners(imageht,(3,3),
-                                              imgpts,ok)
+        imagehuatu = cv2.drawChessboardCorners(imageht,(2,2),
+                                              imgpts,ok)    # 在imageht上画imgpts
+        # (2,2)表示棋盘格有2行2列
         plt.imshow(imagehuatu)
         plt.show()
         
-    np.savez(os.getcwd() + '\\internal_reference\\internal_reference',
+    np.savez(os.getcwd() + '\\internal_reference\\p1_14',
              mtx=mtx, dist=dist)
     
     print('内参是:\n', mtx, '\n畸变参数是:\n', dist,

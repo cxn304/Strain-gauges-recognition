@@ -14,6 +14,8 @@ cali_img/
 internal_reference/
 develop-eggs/
 dist/
+gauges/
+capture_folder/
 downloads/
 eggs/
 .eggs/
