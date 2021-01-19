@@ -10,8 +10,10 @@ class RPNplus(tf.keras.Model):
         # conv1
         self.conv1_1 = tf.keras.layers.Conv2D(64, 3, activation='relu',
                                               padding='same')
+        # 64个3x3的矩阵对应一个3通道的图,即厚度为3的tensor,就是3,3,3,64
         self.conv1_2 = tf.keras.layers.Conv2D(64, 3, activation='relu', 
                                               padding='same')
+        # 64个3x3的矩阵对应厚度为64的tensor,就是3,3,64,64
         self.pool1   = tf.keras.layers.MaxPooling2D(2, strides=2, 
                                                     padding='same')
 

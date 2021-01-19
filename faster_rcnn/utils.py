@@ -39,7 +39,7 @@ def extract_boxes(filename):
     # 提取出图像尺寸
     width = int(root.find('.//size/width').text)
     height = int(root.find('.//size/height').text)
-    return boxes, width, height
+    return boxes
 
 
 def plot_boxes_on_image(show_image_with_boxes, boxes, color=[0, 0, 255], thickness=2):
@@ -68,7 +68,7 @@ def compute_iou(boxes1, boxes2):
     如果说得到的 IOU 值小于于设置的负阈值,那么我们称这个预测框为负预测框(
         )negative anchor),其中包含着背景
     """
-    left_up = np.maximum(boxes1[..., :2], boxes2[..., :2], )
+    left_up = np.maximum(boxes1[..., :2], boxes2[..., :2] )
     right_down = np.minimum(boxes1[..., 2:], boxes2[..., 2:])
     inter_wh = np.maximum(right_down - left_up, 0.0)  # 交集的宽和高
     inter_area = inter_wh[..., 0] * inter_wh[..., 1]  # 交集的面积
