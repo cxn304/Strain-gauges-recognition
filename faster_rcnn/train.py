@@ -110,8 +110,8 @@ def DataGenerator(synthetic_dataset_path, batch_size):
 
 def compute_loss(target_scores, target_bboxes, target_masks, pred_scores, pred_bboxes):
     """
-    target_scores shape: [1, 64, 80, 9, 2],  pred_scores shape: [1, 64, 80, 9, 2]
-    target_bboxes shape: [1, 64, 80, 9, 4],  pred_bboxes shape: [1, 64, 80, 9, 4]
+    target_scores shape: [1, 64, 80, 9, 2],  pred_scores shape: [1,64,80,9,2]
+    target_bboxes shape: [1, 64, 80, 9, 4],  pred_bboxes shape: [1,64,80,9,4]
     target_masks  shape: [1, 64, 80, 9]
     target_bboxes: t_x, t_y, t_w, t_h两个平移量和两个尺度因子
     """
@@ -143,7 +143,7 @@ def compute_loss(target_scores, target_bboxes, target_masks, pred_scores, pred_b
 
 
 EPOCHS = 10 # 所有数据训练10遍
-STEPS = 30  # 30*2=60个数据
+STEPS = 35  # 30*2=60个数据
 batch_size = 2
 lambda_scale = 1.
 synthetic_dataset_path="..\\gauges"
@@ -152,7 +152,7 @@ TrainSet = DataGenerator(synthetic_dataset_path, batch_size)  # 取出batch_size
 model = RPNplus()   # 类的实例化
 optimizer = tf.keras.optimizers.Adam(lr=1e-4)
 writer = tf.summary.create_file_writer("./log")
-global_steps = tf.Variable(0, trainable=False, dtype=tf.int64)  # tf的变量,不需要训练
+global_steps = tf.Variable(0, trainable=False, dtype=tf.int64) # tf的变量,不需要训练
 
 for epoch in range(EPOCHS):
     for step in range(STEPS):   # 遍历一次所有文件

@@ -47,6 +47,9 @@ def undistortion(image, camera_matrix, dist_coeff):
 # 获取畸变校正和立体校正的映射变换矩阵、重投影矩阵
 # @param：config是一个类，存储着双目标定的参数:config = stereoconfig.stereoCamera()
 def getRectifyTransform(height, width, config):
+    """
+    共面行较准
+    """
     # 读取内参和外参
     left_K = config.cam_matrix_left
     right_K = config.cam_matrix_right
@@ -205,16 +208,17 @@ if __name__ == '__main__':
     cali_folder_left = 'D:/cxn_project/Strain-gauges-recognition/cali_img/left/'
     cali_folder_right = 'D:/cxn_project/Strain-gauges-recognition/cali_img/right/'
     iml = cv2.imread(
-        'D:/cxn_project/Strain-gauges-recognition/cali_img/left/l3.bmp')  # 左图
+        'D:/cxn_project/Strain-gauges-recognition/cali_img/left/l0.bmp')  # 左图
     imr = cv2.imread(
-        'D:/cxn_project/Strain-gauges-recognition/cali_img/right/r3.bmp')  # 右图
+        'D:/cxn_project/Strain-gauges-recognition/cali_img/right/r0.bmp')  # 右图
     height, width = iml.shape[0:2]
  
     # 读取相机内参和外参
     config = stereoCameral()
  
     # 立体校正
-    map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
+    map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  
+    # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
     iml_rectified, imr_rectified = rectifyImage(iml, imr, map1x, map1y, map2x, map2y)
     print(Q)
  
@@ -227,10 +231,10 @@ if __name__ == '__main__':
     disp, _ = stereoMatchSGBM(iml_rectified, imr_rectified, True)
     plt.figure()
     plt.imshow(disp, cmap ='gray')
- 
-    # 计算像素点的3D坐标（左相机坐标系下）
-    points_3d = cv2.reprojectImageTo3D(disp, Q)  # 可以使用上文的stereo_config.py给出的参数
- 
+
+    # 计算像素点的3D坐标(左相机坐标系下)第三维应该是x,y,z
+    points_3d = cv2.reprojectImageTo3D(disp, Q)
+
     # 构建点云--Point_XYZRGBA格式
     pointcloud = DepthColor2Cloud(points_3d, iml)
  
