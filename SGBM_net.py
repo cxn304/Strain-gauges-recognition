@@ -195,7 +195,9 @@ def DepthColor2Cloud(points_3d, colors):
     remove_idx4 = np.where(X < -10000)
     remove_idx5 = np.where(Y > 10000)
     remove_idx6 = np.where(Y < -10000)
-    remove_idx = np.hstack((remove_idx1[0], remove_idx2[0], remove_idx3[0], remove_idx4[0], remove_idx5[0], remove_idx6[0]))
+    remove_idx = np.hstack((
+        remove_idx1[0], remove_idx2[0], 
+        remove_idx3[0], remove_idx4[0], remove_idx5[0], remove_idx6[0]))
  
     pointcloud_1 = np.delete(pointcloud, remove_idx, 0)
  
@@ -208,9 +210,9 @@ if __name__ == '__main__':
     cali_folder_left = 'D:/cxn_project/Strain-gauges-recognition/cali_img/left/'
     cali_folder_right = 'D:/cxn_project/Strain-gauges-recognition/cali_img/right/'
     iml = cv2.imread(
-        'D:/cxn_project/Strain-gauges-recognition/cali_img/left/l0.bmp')  # 左图
+        'D:/cxn_project/Strain-gauges-recognition/cali_img/left/l3_.bmp')  # 左图
     imr = cv2.imread(
-        'D:/cxn_project/Strain-gauges-recognition/cali_img/right/r0.bmp')  # 右图
+        'D:/cxn_project/Strain-gauges-recognition/cali_img/right/r3_.bmp')  # 右图
     height, width = iml.shape[0:2]
  
     # 读取相机内参和外参
@@ -219,7 +221,8 @@ if __name__ == '__main__':
     # 立体校正
     map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  
     # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
-    iml_rectified, imr_rectified = rectifyImage(iml, imr, map1x, map1y, map2x, map2y)
+    iml_rectified, imr_rectified = rectifyImage(
+        iml, imr, map1x, map1y, map2x, map2y)
     print(Q)
  
     # 绘制等间距平行线，检查立体校正的效果

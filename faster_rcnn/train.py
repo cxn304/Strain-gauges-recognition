@@ -147,7 +147,8 @@ STEPS = 35  # 30*2=60个数据
 batch_size = 2
 lambda_scale = 1.
 synthetic_dataset_path="..\\gauges"
-TrainSet = DataGenerator(synthetic_dataset_path, batch_size)  # 取出batch_size大小的iteration数据
+TrainSet = DataGenerator(synthetic_dataset_path, batch_size)  
+# 取出batch_size大小的iteration数据
 
 model = RPNplus()   # 类的实例化
 optimizer = tf.keras.optimizers.Adam(lr=1e-4)
