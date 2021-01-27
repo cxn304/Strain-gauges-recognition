@@ -45,7 +45,16 @@ def sift_transform():
     
     img_out = cv2.drawMatches(gray1, kp1, gray2, kp2, matches[:20], None, flags=2)
     plt.imshow(img_out)
+  
     
+def draw(img, corners, imgpts):
+    
+    corner = tuple(corners[0].ravel())
+    img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
+    img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
+    img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
+    return img
+
 
 def my_calibrate(x_nums = 11,y_nums = 11, chess_len = 10):
     """
@@ -63,14 +72,11 @@ def my_calibrate(x_nums = 11,y_nums = 11, chess_len = 10):
     # 我这里用的是10mm×10mm的方格,所以乘了10,以mm代表世界坐标的计量单位
     world_position = [] #存放世界坐标
     image_position = [] #存放棋盘角点对应的图片像素坐标
-    # 设置世界坐标的坐标
-    axis = chess_len * np.float32(
-        [[3, 0, 0], [0, 3, 0], [1, 0, 0],[0,2,0]]).reshape(-1, 3)  
-    # axis列数为3表示xyz,行数不知,表示要画几个点
+    
     # 设置角点查找限制
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     # 获取所有标定图
-    photo_path = os.getcwd() + '\\cali_img'
+    photo_path = os.getcwd() + '\\cali_img\\danmu'
     image_paths = glob.glob(photo_path + '\\*.bmp')  # 遍历文件并保存列表
     for image_path in image_paths:
         image = cv2.imread(image_path)
@@ -109,22 +115,33 @@ def my_calibrate(x_nums = 11,y_nums = 11, chess_len = 10):
     for i in range(len(image_position)):
         _, rvec0, tvec0, inliers0 = cv2.solvePnPRansac(
             world_position[i], image_position[i], mtx, dist)
+        """
+        cv2.solvePnPRansac,世界坐标,识别出的角点在平面中坐标(像素),内参,畸变
+        rvec0, tvec0为相机坐标系到chessboard原点的转换矩阵
+        """
         rotation_m, _ = cv2.Rodrigues(rvec0) # 罗德里格斯变换成3x3的矩阵
         rotation_t = np.hstack([rotation_m,tvec0])
         rotation_t_Homogeneous_matrix = np.vstack(
             [rotation_t,np.array([[0, 0, 0, 1]])])  # 用它左乘世界坐标得相机坐标
         rotation_matrix.append(rotation_t_Homogeneous_matrix)
-        # 函数projectPoints()根据所给的3D坐标和已知的几何变换来求解投影后的2D坐标
+        # 设置世界坐标的坐标
+        axis = chess_len * np.float32(
+        [[3, 0, 0], [0, 3, 0], [1, 0, 0],[0,2,0]]).reshape(-1, 3)  
+        # axis列数为3表示xyz,行数不知,表示要画几个点
+        """
+        函数projectPoints()根据所给的3D坐标和已知的几何变换来求解投影后的2D坐标
+        
+        """
         imgpts, jac = cv2.projectPoints(axis, rvec0, tvec0, mtx, dist)
         imageht = cv2.imread(image_paths[i])
         imagehuatu = cv2.drawChessboardCorners(imageht,(2,2),
-                                              imgpts,ok)    # 在imageht上画imgpts
+                                              imgpts,ok) # 在imageht上画imgpts
         # (2,2)表示棋盘格有2行2列
         plt.imshow(imagehuatu)
         plt.show()
         
-    np.savez(os.getcwd() + '\\internal_reference\\p1_14',
-             mtx=mtx, dist=dist)
+    # np.savez(os.getcwd() + '\\internal_reference\\p1_14',
+    #          mtx=mtx, dist=dist)
     
     print('内参是:\n', mtx, '\n畸变参数是:\n', dist,
        '\n外参:旋转向量(要得到矩阵还要进行罗德里格斯变换)是:\n',

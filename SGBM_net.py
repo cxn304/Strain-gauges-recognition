@@ -210,14 +210,19 @@ if __name__ == '__main__':
     cali_folder_left = 'D:/cxn_project/Strain-gauges-recognition/cali_img/left/'
     cali_folder_right = 'D:/cxn_project/Strain-gauges-recognition/cali_img/right/'
     iml = cv2.imread(
-        'D:/cxn_project/Strain-gauges-recognition/cali_img/left/l3_.bmp')  # 左图
+        'D:/cxn_project/Strain-gauges-recognition/cali_img/left/l18.bmp')  # 左图
     imr = cv2.imread(
-        'D:/cxn_project/Strain-gauges-recognition/cali_img/right/r3_.bmp')  # 右图
+        'D:/cxn_project/Strain-gauges-recognition/cali_img/right/r18.bmp')  # 右图
+    # iml = cv2.imread(
+    #     'D:/Program Files/Polyspace/R2019a/toolbox/vision/visiondata/calibration/stereo/left/left06.png')  # 左图
+    # imr = cv2.imread(
+    #     'D:/Program Files/Polyspace/R2019a/toolbox/vision/visiondata/calibration/stereo/right/right06.png')
     height, width = iml.shape[0:2]
  
     # 读取相机内参和外参
     config = stereoCameral()
- 
+    iml = undistortion(iml ,config.cam_matrix_left , config.distortion_l )
+    imr = undistortion(imr ,config.cam_matrix_right, config.distortion_r )
     # 立体校正
     map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  
     # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
@@ -231,12 +236,12 @@ if __name__ == '__main__':
 
     # 立体匹配
     # iml_, imr_ = preprocess(iml, imr)  # 预处理，一般可以削弱光照不均的影响，不做也可以
-    disp, _ = stereoMatchSGBM(iml_rectified, imr_rectified, True)
+    displ, dispr = stereoMatchSGBM(iml_rectified, imr_rectified, True)
     plt.figure()
-    plt.imshow(disp, cmap ='gray')
+    plt.imshow(displ, cmap ='gray')
 
     # 计算像素点的3D坐标(左相机坐标系下)第三维应该是x,y,z
-    points_3d = cv2.reprojectImageTo3D(disp, Q)
+    points_3d = cv2.reprojectImageTo3D(displ, Q)
 
     # 构建点云--Point_XYZRGBA格式
     pointcloud = DepthColor2Cloud(points_3d, iml)

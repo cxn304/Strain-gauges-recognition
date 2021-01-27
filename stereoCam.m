@@ -1,5 +1,5 @@
 close all;
-% toopencv(stereoParams);
+toopencv(stereoParams);
 % imageDir = 'D:\cxn_project\Strain-gauges-recognition\cali_img';
 % leftImages = imageDatastore(fullfile(imageDir,'left'));
 % rightImages = imageDatastore(fullfile(imageDir,'right'));
@@ -16,8 +16,8 @@ close all;
 % Read in the images.
 % I1 = readimage(leftImages,26);
 % I2 = readimage(rightImages,26);
-I1 = imread('D:\cxn_project\Strain-gauges-recognition\cali_img\left\l17.bmp');
-I2 = imread('D:\cxn_project\Strain-gauges-recognition\cali_img\right\r17.bmp');
+I1 = imread('D:\cxn_project\Strain-gauges-recognition\cali_img\left\l18.bmp');
+I2 = imread('D:\cxn_project\Strain-gauges-recognition\cali_img\right\r18.bmp');
 imageSize = [size(I1,1),size(I1,2)];
 %%
 % Calibrate the stereo camera system.
