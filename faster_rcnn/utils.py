@@ -1,9 +1,10 @@
-'https://blog.csdn.net/qq_36758914/article/details/105886811#3plot_boxes_on_image_53'
+'my code using rotated boxes'
 import numpy as np
 import os
 import xml.etree.ElementTree as ElementTree
 import tensorflow as tf
 import cv2
+import matplotlib.pyplot as plt
 
 """
 wandhG 中包含着 9 个预测框的宽度和长度
@@ -18,6 +19,17 @@ wandhG = np.array([[74., 149.],
                    [51., 132.],
                    [57., 200.]], dtype=np.float32)
 wandhG = np.floor(wandhG*0.7, dtype=np.float32)
+
+chengG = np.array([[70., 140., 0],
+                   [70., 140., 3.14/4],
+                   [140.,  70., 0],
+                   [140., 70., 3.14/4],
+                   [48., 87., 0],
+                   [48., 87., 3.14/4],
+                   [87.,  48., 0],
+                   [87., 48., 3.14/4]],
+                  dtype=np.float32)
+
 
 # 从注解文件中提取边框值
 def extract_boxes(filename):
@@ -39,6 +51,40 @@ def extract_boxes(filename):
     # 提取出图像尺寸
     width = int(root.find('.//size/width').text)
     height = int(root.find('.//size/height').text)
+    return boxes,width,height
+
+
+# 从注解文件中提取旋转值
+def extract_r_boxes(filename_rect,filename_corner):
+    '''
+    旋转值提取函数,rect,corner
+
+    '''
+    corner = np.load(filename_corner)
+    gauge_recs = corner.files # gauge rec list name
+    boxes = np.zeros([len(gauge_recs), 13])
+    with open(filename_rect, 'r') as f:
+        data = f.read() # 读取txt的data
+    data = data.split('\n')[:-1]
+    for n,value in enumerate(data):
+        xyh = value.split(';')
+        x,y = xyh[0].strip('()').split(',')
+        x = int(float(x))
+        y = int(float(y))
+        w,h = xyh[1].strip('()').split(',')
+        w = int(float(w)) # 宽
+        h = int(float(h)) # 高
+        theta = xyh[2]
+        theta= int(float(theta)) # 度
+        rects = np.array([x,y,w,h,theta])
+        boxes[n,8:] = rects
+    
+    for n,c in enumerate(gauge_recs):
+        boxes[n,0:2] = corner[c][0]
+        boxes[n,2:4] = corner[c][1]
+        boxes[n,4:6] = corner[c][2]
+        boxes[n,6:8] = corner[c][3]
+    
     return boxes
 
 
@@ -56,6 +102,20 @@ def plot_boxes_on_image(show_image_with_boxes, boxes, color=[0, 0, 255], thickne
     show_image_with_boxes = cv2.cvtColor(
         show_image_with_boxes, cv2.COLOR_BGR2RGB)
     return show_image_with_boxes
+
+
+def plot_rboxes_on_image(img, boxes, color=[0, 255, 0], thickness=2):
+    """
+    旋转的
+    boxes的结构为外接矩形四个点坐标
+    """
+    h,l = boxes.shape
+    boxes = tf.reshape(boxes,shape=[h,4,2]).numpy()
+    boxes = boxes.astype(int)
+    canvas = np.copy(img)
+    for i in range(h):
+        cv2.drawContours(canvas, [boxes[i,:,:]], 0, color, 2)
+    return canvas
 
 
 def compute_iou(boxes1, boxes2):
@@ -81,6 +141,115 @@ def compute_iou(boxes1, boxes2):
     return ious
 
 
+def compute_iou_rotate(boxeso1,boxeso2):
+    """
+    分割法计算IOU
+    boxes2为真实值
+    boxes1,2是列数为13的
+    """
+    n = len(boxeso2)
+    ious = np.zeros(n)
+    w1 = boxeso1[10]  # w设为width
+    h1 = boxeso1[11]  # h设为height
+    for ii in range(n): 
+        w2 = boxeso2[ii,10]  # w设为width
+        h2 = boxeso2[ii,11]
+        if abs(boxeso1[8]-boxeso2[ii,8])<16 or abs(boxeso1[9]-boxeso2[ii,9])<16:
+            a1box = []  # 一般式的a,有四个因为有四条边
+            a2box = []  
+            b1box = []
+            b2box = []
+            c1box = []
+            c2box = []
+            
+            boxes1 = boxeso1[:8].reshape(4,2)
+            boxes2 = boxeso2[ii,:8].reshape(4,2)
+            # boxes2 = boxeso2[:,:8].reshape(n,4,2)
+            boxes1 = np.concatenate((boxes1,boxes1[0,:].reshape((1,2))),axis=0)
+            boxes2 = np.concatenate((boxes2,boxes2[0,:].reshape((1,2))),axis=0)
+            # boxes2 = np.concatenate((boxes2,boxes2[:,0,:].reshape((n,1,2))),axis=1)
+            '''
+            两点式转为一般式的abc
+            ''' 
+            for i in range(4):  
+                a1box.append(-(boxes1[i,1]-boxes1[i+1,1]))
+                a2box.append(-(boxes2[i,1]-boxes2[i+1,1]))
+                # a2box.append(-(boxes2[:,0,1]-boxes2[:,0+1,1]))
+                b1box.append((boxes1[i,0]-boxes1[i+1,0]))
+                b2box.append((boxes2[i,0]-boxes2[i+1,0]))
+                # b2box.append((boxes2[:,i,0]-boxes2[:,i+1,0]))
+                c1box.append(boxes1[i,1]*(
+                    boxes1[i+1,0]-boxes1[i,0])-boxes1[i,0]*(
+                        boxes1[i+1,1]-boxes1[i,1]))
+                
+                c2box.append(boxes2[i,1]*(
+                    boxes2[i+1,0]-boxes2[i,0])-boxes2[i,0]*(
+                        boxes2[i+1,1]-boxes2[i,1]))
+                '''
+                c2box.append(boxes2[:,i,1]*(
+                    boxes2[:,i+1,0]-boxes2[:,i,0])-boxes2[:,i,0]*(
+                        boxes2[:,i+1,1]-boxes2[:,i,1]))
+                '''
+            tmp_point = []
+            for i in range(4):  # 找到两个矩形间的所有交点
+                for j in range(4):
+                    w = a1box[i]*b2box[j] - b1box[i]*a2box[j]+0.01 # w = p1.a*p2.b - p1.b*p2.a
+                    # 找到交点
+                    intersectionx = (b1box[i]*c2box[j]-c1box[i]*b2box[j])/w  # (p1.b*p2.c - p1.c*p2.b) / w
+                    intersectiony = (c1box[i]*a2box[j]-a1box[i]*c2box[j])/w  # (p1.c*p2.a - p1.a*p2.c) / w
+                    '''
+                    若交点在两条线段之间
+                    '''
+                    if intersectionx<=max((boxes1[i,0],boxes1[i+1,0])) and intersectionx>=min((boxes1[i,0],boxes1[i+1,0])) and intersectiony<=max((boxes1[i,1],boxes1[i+1,1])) and intersectiony>=min((boxes1[i,1],boxes1[i+1,1])) and intersectionx<=max((boxes2[i,0],boxes2[i+1,0])) and intersectionx>=min((boxes2[i,0],boxes2[i+1,0])) and intersectiony<=max((boxes2[i,1],boxes2[i+1,1])) and intersectiony>=min((boxes2[i,1],boxes2[i+1,1])):
+                       tmp_point.append((intersectionx,intersectiony)) 
+                       
+                    '''
+                    若交点在两条线段的顶点处
+                    '''
+                    if (intersectionx==boxes1[i,0] and intersectiony==boxes1[i,1]) or (intersectionx==boxes1[i+1,0] and intersectiony==boxes1[i+1,1]) or (intersectionx==boxes2[i,0] and intersectiony==boxes2[i,1]) or (intersectionx==boxes2[i+1,0] and intersectiony==boxes2[i+1,1]):
+                        tmp_point.append((intersectionx,intersectiony)) 
+              
+            if len(tmp_point)>2:
+                nn = len(tmp_point) # 有几个交点
+                tmp_point.append(tmp_point[0]) # 计算并集面积
+                
+                initarea = 0
+                for i in range(nn):
+                    initarea = initarea + tmp_point[i][0]*tmp_point[i+1][1]-tmp_point[i][1]*tmp_point[i+1][0]
+                initarea = 0.5*abs(initarea)    # 并集面积
+                ious[ii] = initarea/(w1*h1+w2*h2-initarea)   # 计算交并比
+        
+    return ious
+    
+    
+def compute_regression_rotate(boxes1,boxes2):
+    '''
+    boxes2是真实值
+    '''
+    target_reg = np.zeros(shape=[5, ])
+    x1 = boxes1[8]
+    y1 = boxes1[9]
+    w1 = boxes1[10]  # w设为短边
+    h1 = boxes1[11]  # h设为长边
+    theta1 = boxes1[12]
+
+    
+    x2 = boxes2[8]
+    y2 = boxes2[9]
+    w2 = boxes2[10]  # w设为短边
+    h2 = boxes2[11]  # h设为长边
+    theta2 = boxes2[12]
+    
+    
+    target_reg[0] = (x1 - x2)/(w2+h2)
+    target_reg[1] = (y1 - y2) / (w2+h2)
+    target_reg[2] = np.log(w1 / w2)
+    target_reg[3] = np.log(h1 / h2)
+    target_reg[4] = theta2-theta1
+    
+    return target_reg
+    
+    
 def compute_regression(box1, box2):
     """
     正预测框与真实框之间的平移量和尺度因子间转换
@@ -97,6 +266,47 @@ def compute_regression(box1, box2):
     target_reg[3] = np.log(h1 / h2)
 
     return target_reg
+
+
+def decode_output_rotate(pred_bboxes, pred_scores, score_thresh=0.5):
+    """
+    将一张图片上的 64*80*4 个预测框的平移量与尺度因子以及每个框的得分输入,
+    得到每个正预测框对应的回归框(其实所有表示同一个检测目标的回归框都是近似重合的).
+    pred_bboxes:它的形状为 [1, 64, 80, 4, 5],表示一共 64*80*4 个预测框,
+    每个预测框都包含着两个平移量和两个尺度因子还有一个旋转因子.
+    pred_scores：它的形状为 [1, 64, 80, 4, 2]，表示在 64*80*4 个预测框中,
+    [1, i, j, k, 0] 表示第 i 行第 j 列中的第 k 个预测框中包含的是背景的概率;
+    [1, i, j, k, 1] 表示第 i 行第 j 列中的第 k 个预测框中包含的是检测物体的概率
+    供画图使用
+    """
+    grid_x, grid_y = tf.range(80, dtype=tf.int32), tf.range(64, dtype=tf.int32)
+    grid_x, grid_y = tf.meshgrid(grid_x, grid_y)
+    grid_x, grid_y = tf.expand_dims(grid_x, -1), tf.expand_dims(grid_y, -1)
+    grid_xy = tf.stack([grid_x, grid_y], axis=-1)
+    center_xy = grid_xy * 16 + 8   # 每个小框的中心位置
+    center_xy = tf.cast(center_xy, tf.float32)
+    '''
+    接下来要通过五个位置给出四个角点坐标
+    '''
+    rects = np.zeros([1, 64, 80, 4, 4,2])
+    for i in range(64):
+        for j in range(80):
+            for k,wh in enumerate(chengG):
+                xy_center = tuple(center_xy[i,j,0,:])
+                xy_wh = tuple(wh[:2])
+                xy_theta = wh[-1]
+                minRect = (xy_center,xy_wh,xy_theta)
+                rectCnt = np.int64(cv2.boxPoints(minRect))  # cv2的求法
+                rects[0, i, j, k, ...] = rectCnt # 四个角点坐标
+
+    pred_scores = pred_scores[..., 1]   # 是否是物体的概率
+    score_mask = pred_scores > score_thresh
+    pred_bboxes = rects[score_mask]  # shape=[x,4,2],每个检测框四个角点坐标
+    
+    pred_scores = tf.reshape(pred_scores[score_mask], shape=[-1, ]).numpy()
+    # shape = [x,]
+
+    return pred_scores, pred_bboxes
 
 
 def decode_output(pred_bboxes, pred_scores, score_thresh=0.5):

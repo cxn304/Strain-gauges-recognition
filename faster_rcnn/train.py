@@ -33,6 +33,9 @@ def encode_label(gt_boxes):
                     anchor_boxes = np.array([xmin, ymin, xmax, ymax])
                     anchor_boxes = np.expand_dims(anchor_boxes, axis=0)
                     # compute iou between this anchor and all ground-truth boxes in image.
+                    '''
+                    这里需要改,就是直接计算IOU
+                    '''
                     ious = compute_iou(anchor_boxes, gt_boxes)
                     positive_masks = ious >= pos_thresh
                     negative_masks = ious <= neg_thresh
@@ -150,7 +153,7 @@ synthetic_dataset_path="..\\gauges"
 TrainSet = DataGenerator(synthetic_dataset_path, batch_size)  
 # 取出batch_size大小的iteration数据
 
-model = RPNplus()   # 类的实例化
+model = RPNplus()   # 类的实例化,model输出的是pred_scores, pred_bboxes
 optimizer = tf.keras.optimizers.Adam(lr=1e-4)
 writer = tf.summary.create_file_writer("./log")
 global_steps = tf.Variable(0, trainable=False, dtype=tf.int64) # tf的变量,不需要训练
@@ -161,7 +164,7 @@ for epoch in range(EPOCHS):
         image_data, target_scores, target_bboxes, target_masks = next(TrainSet)
         # 用迭代器每次取出batch_size数量的训练数据
         with tf.GradientTape() as tape:
-            pred_scores, pred_bboxes = model(image_data)
+            pred_scores, pred_bboxes = model(image_data) # Forward pass
             score_loss, boxes_loss = compute_loss(
                 target_scores, target_bboxes, target_masks,
                 pred_scores, pred_bboxes)   # 这一步拿模型输出的pred计算loss

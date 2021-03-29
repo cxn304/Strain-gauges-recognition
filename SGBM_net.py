@@ -210,9 +210,9 @@ if __name__ == '__main__':
     cali_folder_left = 'D:/cxn_project/Strain-gauges-recognition/cali_img/left/'
     cali_folder_right = 'D:/cxn_project/Strain-gauges-recognition/cali_img/right/'
     iml = cv2.imread(
-        'D:/cxn_project/Strain-gauges-recognition/cali_img/left/l18.bmp')  # 左图
+        'D:/cxn_project/Strain-gauges-recognition/cali_img/left/l17.bmp')  # 左图
     imr = cv2.imread(
-        'D:/cxn_project/Strain-gauges-recognition/cali_img/right/r18.bmp')  # 右图
+        'D:/cxn_project/Strain-gauges-recognition/cali_img/right/r17.bmp')  # 右图
     # iml = cv2.imread(
     #     'D:/Program Files/Polyspace/R2019a/toolbox/vision/visiondata/calibration/stereo/left/left06.png')  # 左图
     # imr = cv2.imread(
