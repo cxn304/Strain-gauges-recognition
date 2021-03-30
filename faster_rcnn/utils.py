@@ -21,13 +21,17 @@ wandhG = np.array([[74., 149.],
 wandhG = np.floor(wandhG*0.7, dtype=np.float32)
 
 chengG = np.array([[70., 140., 0],
-                   [70., 140., 3.14/4],
+                   [70., 140., 3.14/6],
+                   [70., 140., -3.14/6],
                    [140.,  70., 0],
-                   [140., 70., 3.14/4],
+                   [140., 70., 3.14/6],
+                   [140., 70., -3.14/6],
                    [48., 87., 0],
-                   [48., 87., 3.14/4],
+                   [48., 87., 3.14/6],
+                   [48., 87., -3.14/6],
                    [87.,  48., 0],
-                   [87., 48., 3.14/4]],
+                   [87., 48., 3.14/6],
+                  [87., 48., -3.14/6]],
                   dtype=np.float32)
 
 
@@ -106,14 +110,14 @@ def plot_boxes_on_image(show_image_with_boxes, boxes, color=[0, 0, 255], thickne
 
 def plot_rboxes_on_image(img, boxes, color=[0, 255, 0], thickness=2):
     """
-    旋转的
-    boxes的结构为外接矩形四个点坐标
+    旋转的boxes的结构为外接矩形四个点坐标,boxes=[n,8] or [n,4,2]
     """
-    h,l = boxes.shape
-    boxes = tf.reshape(boxes,shape=[h,4,2]).numpy()
+    if len(boxes.shape) == 2:
+        h,l = boxes.shape
+        boxes = tf.reshape(boxes,shape=[h,4,2]).numpy()
     boxes = boxes.astype(int)
     canvas = np.copy(img)
-    for i in range(h):
+    for i in range(len(boxes)): # len(boxes)表示第一维度的长度
         cv2.drawContours(canvas, [boxes[i,:,:]], 0, color, 2)
     return canvas
 
@@ -154,7 +158,8 @@ def compute_iou_rotate(boxeso1,boxeso2):
     for ii in range(n): 
         w2 = boxeso2[ii,10]  # w设为width
         h2 = boxeso2[ii,11]
-        if abs(boxeso1[8]-boxeso2[ii,8])<16 or abs(boxeso1[9]-boxeso2[ii,9])<16:
+        if (abs(boxeso1[8]-boxeso2[ii,8])<24 
+            and abs(boxeso1[9]-boxeso2[ii,9])<24):
             a1box = []  # 一般式的a,有四个因为有四条边
             a2box = []  
             b1box = []
@@ -193,10 +198,14 @@ def compute_iou_rotate(boxeso1,boxeso2):
             tmp_point = []
             for i in range(4):  # 找到两个矩形间的所有交点
                 for j in range(4):
-                    w = a1box[i]*b2box[j] - b1box[i]*a2box[j]+0.01 # w = p1.a*p2.b - p1.b*p2.a
+                    w = a1box[i]*b2box[j] - b1box[i]*a2box[j] 
+                    # w = p1.a*p2.b - p1.b*p2.a
+                    if w*w < 0.01: w = 0.1
                     # 找到交点
-                    intersectionx = (b1box[i]*c2box[j]-c1box[i]*b2box[j])/w  # (p1.b*p2.c - p1.c*p2.b) / w
-                    intersectiony = (c1box[i]*a2box[j]-a1box[i]*c2box[j])/w  # (p1.c*p2.a - p1.a*p2.c) / w
+                    intersectionx = (b1box[i]*c2box[j]-c1box[i]*b2box[j])/w  
+                    # (p1.b*p2.c - p1.c*p2.b) / w
+                    intersectiony = (c1box[i]*a2box[j]-a1box[i]*c2box[j])/w  
+                    # (p1.c*p2.a - p1.a*p2.c) / w
                     '''
                     若交点在两条线段之间
                     '''
@@ -224,28 +233,28 @@ def compute_iou_rotate(boxeso1,boxeso2):
     
 def compute_regression_rotate(boxes1,boxes2):
     '''
-    boxes2是真实值
+    boxes2是chengG中的值
     '''
     target_reg = np.zeros(shape=[5, ])
     x1 = boxes1[8]
     y1 = boxes1[9]
-    w1 = boxes1[10]  # w设为短边
-    h1 = boxes1[11]  # h设为长边
+    w1 = boxes1[10]
+    h1 = boxes1[11]
     theta1 = boxes1[12]
 
     
     x2 = boxes2[8]
     y2 = boxes2[9]
-    w2 = boxes2[10]  # w设为短边
-    h2 = boxes2[11]  # h设为长边
+    w2 = boxes2[10]
+    h2 = boxes2[11]
     theta2 = boxes2[12]
     
     
-    target_reg[0] = (x1 - x2)/(w2+h2)
-    target_reg[1] = (y1 - y2) / (w2+h2)
+    target_reg[0] = (x1 - x2)/(w2)
+    target_reg[1] = (y1 - y2) / (h2)
     target_reg[2] = np.log(w1 / w2)
     target_reg[3] = np.log(h1 / h2)
-    target_reg[4] = theta2-theta1
+    target_reg[4] = (theta1-theta2*180/3.14159)/60  # 这里的单位是度,解码时候要乘以60
     
     return target_reg
     
@@ -270,15 +279,25 @@ def compute_regression(box1, box2):
 
 def decode_output_rotate(pred_bboxes, pred_scores, score_thresh=0.5):
     """
-    将一张图片上的 64*80*4 个预测框的平移量与尺度因子以及每个框的得分输入,
+    将一张图片上的 64*80*12个预测框的平移量与尺度因子以及每个框的得分输入,
     得到每个正预测框对应的回归框(其实所有表示同一个检测目标的回归框都是近似重合的).
-    pred_bboxes:它的形状为 [1, 64, 80, 4, 5],表示一共 64*80*4 个预测框,
+    pred_bboxes:它的形状为 [1, 64, 80, 12, 5],表示一共 64*80*12 个预测框,
     每个预测框都包含着两个平移量和两个尺度因子还有一个旋转因子.
-    pred_scores：它的形状为 [1, 64, 80, 4, 2]，表示在 64*80*4 个预测框中,
+    pred_scores：它的形状为 [1, 64, 80, 12, 2]，表示在 64*80*12 个预测框中,
     [1, i, j, k, 0] 表示第 i 行第 j 列中的第 k 个预测框中包含的是背景的概率;
     [1, i, j, k, 1] 表示第 i 行第 j 列中的第 k 个预测框中包含的是检测物体的概率
-    供画图使用
+    供画图使用,这里有问题,明天修改
     """
+    used_chengG = []
+    _,height,width,chengG_width,param = pred_bboxes.shape
+    for i in range(height):
+        for j in range(width):
+            for k in range(chengG_width):
+                if pred_scores[0,i,j,k,1] == 1:
+                    used_chengG.append((pred_bboxes[0,i,j,k,:],i,j,k))  
+                    # 把i,j,k储存下来的原因是弄清楚是chengG中的哪个框,以便做变换
+    
+    rects = np.zeros([chengG_width,4,2])
     grid_x, grid_y = tf.range(80, dtype=tf.int32), tf.range(64, dtype=tf.int32)
     grid_x, grid_y = tf.meshgrid(grid_x, grid_y)
     grid_x, grid_y = tf.expand_dims(grid_x, -1), tf.expand_dims(grid_y, -1)
@@ -288,25 +307,16 @@ def decode_output_rotate(pred_bboxes, pred_scores, score_thresh=0.5):
     '''
     接下来要通过五个位置给出四个角点坐标
     '''
-    rects = np.zeros([1, 64, 80, 4, 4,2])
-    for i in range(64):
-        for j in range(80):
-            for k,wh in enumerate(chengG):
-                xy_center = tuple(center_xy[i,j,0,:])
-                xy_wh = tuple(wh[:2])
-                xy_theta = wh[-1]
-                minRect = (xy_center,xy_wh,xy_theta)
-                rectCnt = np.int64(cv2.boxPoints(minRect))  # cv2的求法
-                rects[0, i, j, k, ...] = rectCnt # 四个角点坐标
+    for ck,final_rect in enumerate(used_chengG):
+        trans,i,j,k = final_rect
+        xy_center = tuple(center_xy[i,j,0,:]+chengG[k,:2]*trans[:2])
+        xy_wh = tuple(chengG[k,:2]*tf.exp(trans[2:4]))
+        xy_theta = trans[-1]*60+chengG[k,-1]*180/3.14159 # 度,旋转回去,大功告成
+        minRect = (xy_center,xy_wh,xy_theta)
+        rectCnt = np.int64(cv2.boxPoints(minRect))  # cv2的求法
+        rects[ck,:,:] = rectCnt
 
-    pred_scores = pred_scores[..., 1]   # 是否是物体的概率
-    score_mask = pred_scores > score_thresh
-    pred_bboxes = rects[score_mask]  # shape=[x,4,2],每个检测框四个角点坐标
-    
-    pred_scores = tf.reshape(pred_scores[score_mask], shape=[-1, ]).numpy()
-    # shape = [x,]
-
-    return pred_scores, pred_bboxes
+    return rects
 
 
 def decode_output(pred_bboxes, pred_scores, score_thresh=0.5):

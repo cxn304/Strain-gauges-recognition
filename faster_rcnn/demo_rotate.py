@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-import math
 import matplotlib.pyplot as plt
 from utils import compute_iou_rotate, plot_rboxes_on_image, chengG, extract_r_boxes, compute_regression_rotate, decode_output_rotate
 
@@ -64,10 +63,12 @@ for i in range(1,64-1):
             corners = boxes1[:8].reshape((4,2))
             
             if np.any(positive_masks):
-                canvas = plot_rboxes_on_image(encoded_image,boxes1[:8].reshape(1,8), 
-                                     thickness=1)
+                canvas = plot_rboxes_on_image(
+                    encoded_image,boxes1[:8].reshape(1,8), thickness=1)
+                '''
                 plt.figure()
                 plt.imshow(canvas)
+                '''
                 print("=> Encoding positive sample: %d, %d, %d" %(i, j, k))
                 cv2.circle(encoded_image, center=(int(np.mean(corners[:,0])), 
                                                   int(np.mean(corners[:,1]))),
@@ -82,6 +83,7 @@ for i in range(1,64-1):
                 selected_gt_boxes = gt_boxes[max_iou_idx]
                 target_bboxes[i, j, k] = compute_regression_rotate(
                     selected_gt_boxes, boxes1)
+                # target_bboxes[64,80,12,5],最后一个是两个框间角度的差值
                 
             if np.all(negative_masks): # negative_masks数量为一幅图有几个真实框
                 target_scores[i, j, k, 0] = 1.  # 表示是背景
@@ -91,13 +93,21 @@ for i in range(1,64-1):
                                                   int(np.mean(corners[:,1]))),
                                 radius=1, color=[0,0,0], thickness=4)
                 
-Image.fromarray(encoded_image).show()
-'''                
+'''              
 plt.figure()
 canvas = plot_rboxes_on_image(encoded_image,huatubox[1:], 
                                      thickness=1)  
 plt.imshow(canvas)        
 '''
+############################## FASTER DECODE OUTPUT ###############################
+faster_decode_image = np.copy(raw_image)
+pred_bboxes = np.expand_dims(target_bboxes, 0).astype(np.float32)
+pred_scores = np.expand_dims(target_scores, 0).astype(np.float32)
+rects = decode_output_rotate(pred_bboxes, pred_scores)
 
+plt.figure()
+canvas = plot_rboxes_on_image(faster_decode_image,
+                              rects, color=[255, 0, 0]) # red boundig box
+plt.imshow(canvas) 
 
 # 现在的问题是只能找到其中的一个片子,然后没有继续往下计算
