@@ -1,6 +1,6 @@
 'my code using rotated boxes'
 import numpy as np
-import os
+import random,pathlib
 import xml.etree.ElementTree as ElementTree
 import tensorflow as tf
 import cv2
@@ -58,13 +58,12 @@ def extract_boxes(filename):
     return boxes,width,height
 
 
-# 从注解文件中提取旋转值
+# 从注解文件中提取真实框的数据
 def extract_r_boxes(filename_rect,filename_corner):
     '''
-    旋转值提取函数,rect,corner
-
+    旋转值提取函数,rect(five_data).txt,corner(four_corner).npz
     '''
-    corner = np.load(filename_corner)
+    corner = np.load(filename_corner,allow_pickle=True)
     gauge_recs = corner.files # gauge rec list name
     boxes = np.zeros([len(gauge_recs), 13])
     with open(filename_rect, 'r') as f:
@@ -234,6 +233,7 @@ def compute_iou_rotate(boxeso1,boxeso2):
 def compute_regression_rotate(boxes1,boxes2):
     '''
     boxes2是chengG中的值
+    这一步给出的值相当于y-truth
     '''
     target_reg = np.zeros(shape=[5, ])
     x1 = boxes1[8]
@@ -254,7 +254,8 @@ def compute_regression_rotate(boxes1,boxes2):
     target_reg[1] = (y1 - y2) / (h2)
     target_reg[2] = np.log(w1 / w2)
     target_reg[3] = np.log(h1 / h2)
-    target_reg[4] = (theta1-theta2*180/3.14159)/60  # 这里的单位是度,解码时候要乘以60
+    target_reg[4] = (theta1-theta2*180/3.14159)/60  
+    # 这里的单位是度,解码时候要乘以60,
     
     return target_reg
     
@@ -305,13 +306,14 @@ def decode_output_rotate(pred_bboxes, pred_scores, score_thresh=0.5):
     center_xy = grid_xy * 16 + 8   # 每个小框的中心位置
     center_xy = tf.cast(center_xy, tf.float32)
     '''
-    接下来要通过五个位置给出四个角点坐标
+    接下来要通过五个regression给出四个角点坐标
     '''
     for ck,final_rect in enumerate(used_chengG):
         trans,i,j,k = final_rect
         xy_center = tuple(center_xy[i,j,0,:]+chengG[k,:2]*trans[:2])
         xy_wh = tuple(chengG[k,:2]*tf.exp(trans[2:4]))
-        xy_theta = trans[-1]*60+chengG[k,-1]*180/3.14159 # 度,旋转回去,大功告成
+        xy_theta = trans[-1]*60+chengG[k,-1]*180/3.14159 
+        # regression时候是-,现在是加
         minRect = (xy_center,xy_wh,xy_theta)
         rectCnt = np.int64(cv2.boxPoints(minRect))  # cv2的求法
         rects[ck,:,:] = rectCnt
@@ -387,3 +389,64 @@ def nms(pred_boxes, pred_score, iou_thresh):
 
     selected_boxes = np.array(selected_boxes)
     return selected_boxes
+
+
+def generate_train_data(all_paths,img_final):
+    '''
+    生成 训练集图片和标签还有mask
+    '''
+    n = len(all_paths)
+    cn = random.choice(range(n))  # 选取哪个模板以加入mask和生成npy,npz
+    filename_rect,filename_corner = all_paths[cn][1],all_paths[cn][2]
+    filename_img,filename_mask = all_paths[cn][0],all_paths[cn][3]
+    gt_boxes = extract_r_boxes(filename_rect,filename_corner)
+    xbias = random.randint(-80,80)  # 这个偏差是由两幅图的位置决定的
+    ybias = random.randint(-500,100)
+    x_o = gt_boxes[:,8]   # 所有矩形坐标x
+    y_o = gt_boxes[:,9]   # 所有矩形坐标y
+    x_o = x_o + xbias   # 对几个矩形进行平移
+    y_o = y_o + ybias
+    mask = np.load(filename_mask) # 读取mask，为与图像大小一致的0-1矩阵
+    gauge_img = plt.imread(filename_img)
+    h,l = mask.shape # 行，列
+    M = np.float32([[1,0,xbias],[0,1,ybias]]) # 平移矩阵
+    new_mask = cv2.warpAffine(mask,M,(l,h)) # opencv按照矩阵进行mask平移
+    new_gauge_img = cv2.warpAffine(gauge_img,M,(l,h)) # 原图进行平移
+    boxes1 = np.zeros([len(x_o),13]) # 变换后的13长度的box
+    for i in range(len(x_o)):
+      xy_center = (x_o[i],y_o[i])
+      xy_wh = tuple(gt_boxes[i][10:12])
+      xy_theta = gt_boxes[i][-1]
+      minRect = (xy_center,xy_wh,xy_theta)
+      rectCnt = np.int64(cv2.boxPoints(minRect))  # cv2的求法
+      rectCnt = rectCnt.reshape(-1)   # 每个预设框的坐标
+      tmp = np.concatenate((rectCnt,[x_o[i],y_o[i]],gt_boxes[i,-3:]),axis=0)
+      boxes1[i,:] = tmp # 这里没错误
+    
+    canvas = plot_rboxes_on_image(
+                  img_final,boxes1[:,:8].reshape(len(x_o),8), thickness=1)
+    plt.figure()
+    plt.imshow(canvas)
+    plt.figure()
+    plt.imshow(new_mask)
+    plt.figure()
+    plt.imshow(new_gauge_img)
+    return boxes1
+
+
+def create_image_label_path(image_path,label_path):
+    """
+    建立提取训练图像及标签的数据:image,rect(five_data),corner(four_corner),mask
+    """
+    img_p = pathlib.Path(image_path)
+    label_p = pathlib.Path(label_path)
+    all_image_paths = [str(path) for path in img_p.iterdir()]
+    all_label_paths = [str(path) for path in label_p.iterdir()]
+    all_label_paths.sort()
+    all_mask_paths = [path for path in all_label_paths if 'npy' in path]
+    all_rect_label = [path for path in all_label_paths if 'txt' in path]
+    all_corner_label = [path for path in all_label_paths if 'npz' in path]
+    image_label_path = [[
+      all_image_paths[i],all_rect_label[i],all_corner_label[i],
+      all_mask_paths[i]] for i in range(len(all_image_paths))]
+    return image_label_path

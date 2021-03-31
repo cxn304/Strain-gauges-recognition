@@ -3,22 +3,29 @@ import cv2
 import random
 import tensorflow as tf
 import numpy as np
-from utils import compute_iou, extract_boxes, wandhG, compute_regression
+from utils import compute_iou, extract_boxes, wandhG, compute_regression,wandhG
 from rpn import RPNplus
 
 
-pos_thresh = 0.5
+pos_thresh = 0.3
 neg_thresh = 0.1
 grid_width = grid_height = 16
 image_height, image_width = 1024, 1280
+cheng_length = len(wandhG)
 
 
 def encode_label(gt_boxes):
-    target_scores = np.zeros(shape=[64, 80, 9, 2]) # 0: background, 1: foreground, ,
-    target_bboxes = np.zeros(shape=[64, 80, 9, 4]) # t_x, t_y, t_w, t_h
-    target_masks  = np.zeros(shape=[64, 80, 9]) # negative_samples: -1, positive_samples: 1
-    for i in range(64): # y: height
-        for j in range(80): # x: width
+    target_scores = np.zeros(
+        shape=[image_height/grid_height, 
+               image_width/grid_width, cheng_length, 2]) # 0: background, 1: foreground, 
+    target_bboxes = np.zeros(
+        shape=[image_height/grid_height, 
+               image_width/grid_width, cheng_length, 4]) # t_x, t_y, t_w, t_h
+    target_masks  = np.zeros(
+        shape=[image_height/grid_height,
+               image_width/grid_width, cheng_length]) # negative_samples: -1, positive_samples: 1
+    for i in range(image_height/grid_height): # y: height
+        for j in range(image_width/grid_width): # x: width
             for k in range(9):
                 center_x = j * grid_width + grid_width * 0.5
                 center_y = i * grid_height + grid_height * 0.5
@@ -75,7 +82,9 @@ def create_image_label_path_generator(synthetic_dataset_path):
     label_path = synthetic_dataset_path + '\\gauges_labels\\'
     image_label_paths = [glob.glob(photo_path + '*.bmp'),
                          glob.glob(label_path + '*.xml')]
-    image_label_path = [[image_label_paths[0][i],image_label_paths[1][i]] for i in range(len(image_label_paths[0]))]
+    image_label_path = [[
+        image_label_paths[0][i],image_label_paths[1][i]] for i in range(
+            len(image_label_paths[0]))]
     while True:
         random.shuffle(image_label_path)
         for i in range(image_num):
@@ -93,12 +102,15 @@ def DataGenerator(synthetic_dataset_path, batch_size):
     while True:
         images = np.zeros(shape=[batch_size, image_height, image_width, 3], 
                           dtype=np.float)
-        target_scores = np.zeros(shape=[batch_size, 64, 80, 9, 2], 
-                                 dtype=np.float)
-        target_bboxes = np.zeros(shape=[batch_size, 64, 80, 9, 4],
-                                 dtype=np.float)
-        target_masks  = np.zeros(shape=[batch_size, 64, 80, 9], 
-                                 dtype=np.int)
+        target_scores = np.zeros(
+            shape=[batch_size, image_height/grid_height, 
+                   image_width/grid_width, cheng_length, 2], dtype=np.float)
+        target_bboxes = np.zeros(
+            shape=[batch_size, image_height/grid_height, 
+                   image_width/grid_width, cheng_length, 5],dtype=np.float)
+        target_masks  = np.zeros(
+            shape=[batch_size, image_height/grid_height,
+                   image_width/grid_width, cheng_length], dtype=np.int)
 
         for i in range(batch_size):
             # next() 返回迭代器的下一个项目
@@ -111,7 +123,8 @@ def DataGenerator(synthetic_dataset_path, batch_size):
         yield images, target_scores, target_bboxes, target_masks
 
 
-def compute_loss(target_scores, target_bboxes, target_masks, pred_scores, pred_bboxes):
+def compute_loss(target_scores, target_bboxes, 
+                 target_masks, pred_scores, pred_bboxes):
     """
     target_scores shape: [1, 64, 80, 9, 2],  pred_scores shape: [1,64,80,9,2]
     target_bboxes shape: [1, 64, 80, 9, 4],  pred_bboxes shape: [1,64,80,9,4]
@@ -156,7 +169,8 @@ TrainSet = DataGenerator(synthetic_dataset_path, batch_size)
 model = RPNplus()   # 类的实例化,model输出的是pred_scores, pred_bboxes
 optimizer = tf.keras.optimizers.Adam(lr=1e-4)
 writer = tf.summary.create_file_writer("./log")
-global_steps = tf.Variable(0, trainable=False, dtype=tf.int64) # tf的变量,不需要训练
+global_steps = tf.Variable(0, trainable=False, dtype=tf.int64) 
+# tf的变量,不需要训练
 
 for epoch in range(EPOCHS):
     for step in range(STEPS):   # 遍历一次所有文件

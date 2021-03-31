@@ -38,7 +38,7 @@ def Multi_scale_temp():
     
     
 
-def find_all_gauges(blurs,imgss,LURD):
+def find_all_gauges(imagePath,blurs,imgss,LURD):
     """
     通过点击鼠标得到面积
     """
@@ -66,7 +66,9 @@ def find_all_gauges(blurs,imgss,LURD):
     x=[(i,np.sum(labels==i)) for i in range(num) 
        if np.sum(labels==i)>mianji*0.7 and np.sum(labels==i)<mianji*1.2]
     masks = create_mask_gauges(erosion,kernel,x,labels) # 所有应变片的掩膜
-    np.save('mask_for_gauges1.npy',masks)
+    
+    this_name = imagePath.split('/')[-1].split('.')[0]
+    np.save(this_name + '.npy',masks)
     for i in range(len(x)):
         find_gauges[labels==x[i][0]] = 1
     imgs[:,:,1] = blur
@@ -164,7 +166,7 @@ def save_contours_recs(imagePath,all_rect,four_corner):
     '''
     this_name = imagePath.split('/')[-1].split('.')[0]
     np.savez('./colab_files/'+ this_name + '_corner.npz', *four_corner) # 解包list
-    rectname = open('./colab_files/'+ this_name + '_rect.txt', 'w')
+    rectname = open(this_name + '_rect.txt', 'w')
     # np.savez('./colab_files/'+ this_name + '_rect.npz', np.array(all_rect))
     for value in all_rect:
         for values in value:
@@ -175,7 +177,7 @@ def save_contours_recs(imagePath,all_rect,four_corner):
     return 
 
 
-imagePath = './colab_files/lb2.bmp'
+imagePath = './colab_files/l3.bmp'
 templatePath = './gauges/tmp.bmp'
 #Loading image and template
 img = cv2.imread(imagePath)
