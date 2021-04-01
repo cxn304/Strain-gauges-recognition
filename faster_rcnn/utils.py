@@ -1,6 +1,6 @@
 'my code using rotated boxes'
 import numpy as np
-import random,pathlib
+import random,pathlib, os
 import xml.etree.ElementTree as ElementTree
 import tensorflow as tf
 import cv2
@@ -391,9 +391,10 @@ def nms(pred_boxes, pred_score, iou_thresh):
     return selected_boxes
 
 
-def generate_train_data(all_paths,img_final):
+def generate_train_data(all_paths):
     '''
-    生成 训练集图片和标签还有mask
+    生成训练集图片和标签还有mask,all_paths表示自己手工制作的原始训练集图片和标签
+    的地址.
     '''
     n = len(all_paths)
     cn = random.choice(range(n))  # 选取哪个模板以加入mask和生成npy,npz
@@ -423,15 +424,7 @@ def generate_train_data(all_paths,img_final):
       tmp = np.concatenate((rectCnt,[x_o[i],y_o[i]],gt_boxes[i,-3:]),axis=0)
       boxes1[i,:] = tmp # 这里没错误
     
-    canvas = plot_rboxes_on_image(
-                  img_final,boxes1[:,:8].reshape(len(x_o),8), thickness=1)
-    plt.figure()
-    plt.imshow(canvas)
-    plt.figure()
-    plt.imshow(new_mask)
-    plt.figure()
-    plt.imshow(new_gauge_img)
-    return boxes1
+    return new_gauge_img,new_mask,boxes1
 
 
 def create_image_label_path(image_path,label_path):
@@ -450,3 +443,69 @@ def create_image_label_path(image_path,label_path):
       all_image_paths[i],all_rect_label[i],all_corner_label[i],
       all_mask_paths[i]] for i in range(len(all_image_paths))]
     return image_label_path
+
+
+def add_gauge_to_img(filepath,image_path,label_path):
+    """
+    replace train image with gauges, it use generate_train_data output.
+    filepath:COCO dataset path, image_path:gauges image path, label_path:
+    gauges label path.
+    """
+    plt.figure(figsize=(10, 10))  # 设置图像大小
+    allfile = os.listdir(filepath)
+    allfile_num = len(allfile)
+    if not os.path.exists('/content/train_img/'): #判断文件夹是否存在
+        os.makedirs('/content/train_img/')
+    if not os.path.exists('/content/train_labels/'): #判断文件夹是否存在
+        os.makedirs('/content/train_labels/')
+    for i,filename in enumerate(allfile):
+        if i == 9:break
+        saveimg = read_img_from_tf(filepath+filename)
+        all_paths = create_image_label_path(image_path,label_path)
+        new_gauge_img,new_mask,boxes1=generate_train_data(all_paths)  #################
+        saveimg[new_mask==1] = new_gauge_img[new_mask==1]
+        cv2.imwrite('/content/train_img/'+filename, saveimg)  # 储存加上应变片的训练图片
+        # canvass = plot_gauges(saveimg)
+        plt.subplot(3, 3, i + 1)
+        plt.imshow(saveimg,cmap='gray')
+        plt.title(str(i))
+        plt.axis("off")
+        save_contours_recs(filename,boxes1)
+    
+
+def save_contours_recs(filename,boxes1):
+    '''
+    boxes1为长度为[n,13]的numpy矩阵
+    four_corner储存矩形四个点坐标以及....all_rect最小外接矩形的中心(x,y),(宽度,高度),旋转角度
+    '''
+    all_rect = []
+    four_corner = []
+    for i in range(len(boxes1)):
+      four_corner.append(boxes1[i,:8].reshape(4,2))
+      xy_center = (boxes1[i,8],boxes1[i,9])
+      xy_wh = (boxes1[i,10],boxes1[i,11])
+      xy_theta = boxes1[i,12]
+      minAreaRect = (xy_center,xy_wh,xy_theta)
+      all_rect.append(minAreaRect)
+
+    this_name = filename.split('.')[0]
+    np.savez('/content/train_labels/'+ this_name + '.npz', *four_corner) # 解包list
+    rectname = open('/content/train_labels/'+ this_name + '.txt', 'w')
+    # np.savez('./colab_files/'+ this_name + '_rect.npz', np.array(all_rect))
+    for value in all_rect:
+        for values in value:
+            rectname.write(str(values))
+            rectname.write(';')
+        rectname.write('\n')
+    rectname.close()
+
+
+def read_img_from_tf(filename):
+    """
+    read file from tf and resize it to [1024, 1280]
+    """
+    img_raw = tf.io.read_file(filename) # 原始二进制数据
+    img_tensor = tf.image.decode_image(img_raw) # 将它解码为图像tensor张量
+    img_final = tf.image.resize(img_tensor, [1024, 1280])[:,:,0]
+    saveimg = img_final.numpy() # 0-255
+    return saveimg

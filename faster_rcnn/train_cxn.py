@@ -132,7 +132,7 @@ def create_image_label_path_generator(image_path,label_path):
     all_corner_label = [path for path in all_label_paths if 'npz' in path]
     image_label_path = [[
     all_image_paths[i],all_rect_label[i],all_corner_label[i]] for i in range(
-            len(all_image_paths))]
+            len(all_image_paths))]  # 每组数据是一个整体
     while True:
         random.shuffle(image_label_path)
         for i in range(len(all_image_paths)):
