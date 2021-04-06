@@ -6,6 +6,14 @@ import tensorflow as tf
 import cv2
 import matplotlib.pyplot as plt
 
+
+coco_file_path = '../input/coco-2017-dataset/coco2017/val2017/' # coco_file的图片路径
+gauge_img_path = './ori_gauge_img/'  # 手工提取的应变片图片
+gauge_label_path = './ori_gauge_labels/'    # 手工提取的应变片位置
+generate_train_img = './train_img/'               # 应变片贴到COCO图片上的图片
+generate_train_label = './train_labels/'          # 应变片贴到COCO图片上的位置
+
+
 """
 wandhG 中包含着 9 个预测框的宽度和长度
 """
@@ -147,8 +155,8 @@ def compute_iou(boxes1, boxes2):
 def compute_iou_rotate(boxeso1,boxeso2):
     """
     分割法计算IOU
-    boxes2为真实值
-    boxes1,2是列数为13的
+    boxeso1为计算出的值,boxeso1[1,13],boxeso2为真实值,boxeso2是[n,13]
+    
     """
     n = len(boxeso2)
     ious = np.zeros(n)
@@ -287,8 +295,9 @@ def decode_output_rotate(pred_bboxes, pred_scores, score_thresh=0.5):
     pred_scores：它的形状为 [1, 64, 80, 12, 2]，表示在 64*80*12 个预测框中,
     [1, i, j, k, 0] 表示第 i 行第 j 列中的第 k 个预测框中包含的是背景的概率;
     [1, i, j, k, 1] 表示第 i 行第 j 列中的第 k 个预测框中包含的是检测物体的概率
-    供画图使用,这里有问题,明天修改
+    return: corners[ck,13],所有正预测框经过回归参数变换后的4个角点坐标和5个回归量
     """
+    '''
     used_chengG = []
     _,height,width,chengG_width,param = pred_bboxes.shape
     for i in range(height):
@@ -297,28 +306,46 @@ def decode_output_rotate(pred_bboxes, pred_scores, score_thresh=0.5):
                 if pred_scores[0,i,j,k,1] == 1:
                     used_chengG.append((pred_bboxes[0,i,j,k,:],i,j,k))  
                     # 把i,j,k储存下来的原因是弄清楚是chengG中的哪个框,以便做变换
-    
-    rects = np.zeros([chengG_width,4,2])
+    '''
+    corners = np.zeros([12,13])
     grid_x, grid_y = tf.range(80, dtype=tf.int32), tf.range(64, dtype=tf.int32)
     grid_x, grid_y = tf.meshgrid(grid_x, grid_y)
     grid_x, grid_y = tf.expand_dims(grid_x, -1), tf.expand_dims(grid_y, -1)
     grid_xy = tf.stack([grid_x, grid_y], axis=-1)
     center_xy = grid_xy * 16 + 8   # 每个小框的中心位置
     center_xy = tf.cast(center_xy, tf.float32)
+    
+    real_xy_center = pred_bboxes[..., 0:2] * chengG[:, 0:2]+center_xy
+    real_wh = chengG[:,:2]*tf.exp(pred_bboxes[...,2:4])
+    real_theta = pred_bboxes[...,-2:-1]*60+chengG[:,-2:-1]*180/3.14159
+    pred_bboxes = tf.concat([real_xy_center, real_wh,real_theta], axis=-1)  
     '''
     接下来要通过五个regression给出四个角点坐标
+    '''
+    # rects = np.zeros(5) # 5个回归量初始化
     '''
     for ck,final_rect in enumerate(used_chengG):
         trans,i,j,k = final_rect
         xy_center = tuple(center_xy[i,j,0,:]+chengG[k,:2]*trans[:2])
         xy_wh = tuple(chengG[k,:2]*tf.exp(trans[2:4]))
-        xy_theta = trans[-1]*60+chengG[k,-1]*180/3.14159 
+        xy_theta = trans[-1]*60+chengG[k,-1]*180/3.14159 # 单位是度
         # regression时候是-,现在是加
         minRect = (xy_center,xy_wh,xy_theta)
+        rects[:2] = [xy_center[0],xy_center[1]]
+        rects[2:4] = [xy_wh[0],xy_wh[1]]
+        rects[-1] = xy_theta
         rectCnt = np.int64(cv2.boxPoints(minRect))  # cv2的求法
-        rects[ck,:,:] = rectCnt
-
-    return rects
+        corners[ck,:8] = rectCnt.reshape(1,8)
+        corners[ck,8:] = rects
+    '''
+    pred_scores = pred_scores[..., 1]   # 是否是物体的概率
+    score_mask = pred_scores > score_thresh
+    pred_bboxes = tf.reshape(pred_bboxes[score_mask], shape=[-1, 5]).numpy()
+    pred_scores = tf.reshape(pred_scores[score_mask], shape=[-1, ]).numpy()
+    '''
+    corners[ck,13],所有正预测框经过回归参数变换后的4个角点坐标和5个回归量
+    '''
+    return corners,pred_scores
 
 
 def decode_output(pred_bboxes, pred_scores, score_thresh=0.5):
@@ -340,7 +367,7 @@ def decode_output(pred_bboxes, pred_scores, score_thresh=0.5):
     anchor_xymin = center_xy - 0.5 * wandhG
 
     xy_min = pred_bboxes[..., 0:2] * wandhG[:, 0:2] + anchor_xymin 
-    # 平移量,9个预测框尺寸,9个预测框左上角坐标
+    # 平移量,9个预测框尺寸,9个预测框左上角坐标,真实坐标
     
     xy_max = tf.exp(pred_bboxes[..., 2:4]) * wandhG[:, 0:2] + xy_min 
     # 之前是log,现在是exp,正预测框变换回真实框
@@ -388,6 +415,37 @@ def nms(pred_boxes, pred_score, iou_thresh):
         pred_score = pred_score[iou_mask]
 
     selected_boxes = np.array(selected_boxes)
+    return selected_boxes
+
+
+def nms_cxn(pred_boxes, pred_score, iou_thresh = 0.4):
+    """
+    pred_boxes shape: [ck,13]
+    pred_score shape: [ck]
+    nms()函数的作用是从选出的正预测框中进一步选出最好的n个预测框,其中,n指图片中检测
+    物的个数.其流程为:
+    取出所有预测框中得分最高的一个,并将这个预测框跟其他的预测框进行 IOU 计算;
+    将IOU值大于0.1的预测框视为与刚取出的得分最高的预测框表示了同一个检测物,故去掉;
+    重复以上操作,直到所有其他的预测框都被去掉为止
+    return: selected_boxes[n,13]
+    """
+    selected_boxes = []
+    while len(pred_boxes) > 0:
+        max_idx = np.argmax(pred_score)
+        selected_box = pred_boxes[max_idx]  # 先找符合度最好的那个框
+        selected_boxes.append(selected_box) # 把框压入最终选择的集合
+        # 接下来排除出选择的符合度最好的框和其得分
+        pred_boxes = np.concatenate(
+            [pred_boxes[:max_idx,...], pred_boxes[max_idx+1:,...]])
+        pred_score = np.concatenate(
+            [pred_score[:max_idx], pred_score[max_idx+1:]])
+        ious = compute_iou_rotate(selected_box, pred_boxes)
+        iou_mask = ious <= 0.1  # 把IOU小于0.1的保留,即这个box外其他的物体
+        pred_boxes = pred_boxes[iou_mask]
+        pred_score = pred_score[iou_mask]
+
+    selected_boxes = np.array(selected_boxes)
+    
     return selected_boxes
 
 
@@ -454,22 +512,24 @@ def add_gauge_to_img(filepath,image_path,label_path):
     plt.figure(figsize=(10, 10))  # 设置图像大小
     allfile = os.listdir(filepath)
     allfile_num = len(allfile)
-    if not os.path.exists('/content/train_img/'): #判断文件夹是否存在
-        os.makedirs('/content/train_img/')
-    if not os.path.exists('/content/train_labels/'): #判断文件夹是否存在
-        os.makedirs('/content/train_labels/')
+    if not os.path.exists(generate_train_img): #判断文件夹是否存在
+        os.makedirs(generate_train_img)
+    if not os.path.exists(generate_train_label): #判断文件夹是否存在
+        os.makedirs(generate_train_label)
     for i,filename in enumerate(allfile):
-        if i == 9:break
+        if i == 256:break
         saveimg = read_img_from_tf(filepath+filename)
         all_paths = create_image_label_path(image_path,label_path)
         new_gauge_img,new_mask,boxes1=generate_train_data(all_paths)  #################
         saveimg[new_mask==1] = new_gauge_img[new_mask==1]
-        cv2.imwrite('/content/train_img/'+filename, saveimg)  # 储存加上应变片的训练图片
+        cv2.imwrite(generate_train_img+filename, saveimg)  # 储存加上应变片的训练图片
         # canvass = plot_gauges(saveimg)
+        '''
         plt.subplot(3, 3, i + 1)
         plt.imshow(saveimg,cmap='gray')
         plt.title(str(i))
         plt.axis("off")
+        '''
         save_contours_recs(filename,boxes1)
     
 
@@ -489,8 +549,8 @@ def save_contours_recs(filename,boxes1):
       all_rect.append(minAreaRect)
 
     this_name = filename.split('.')[0]
-    np.savez('/content/train_labels/'+ this_name + '.npz', *four_corner) # 解包list
-    rectname = open('/content/train_labels/'+ this_name + '.txt', 'w')
+    np.savez(generate_train_label+ this_name + '.npz', *four_corner) # 解包list
+    rectname = open(generate_train_label+ this_name + '.txt', 'w')
     # np.savez('./colab_files/'+ this_name + '_rect.npz', np.array(all_rect))
     for value in all_rect:
         for values in value:

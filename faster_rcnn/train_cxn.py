@@ -7,8 +7,7 @@ import cv2
 import random
 import tensorflow as tf
 import numpy as np
-from utils import compute_iou_rotate, plot_rboxes_on_image, chengG, extract_r_boxes, compute_regression_rotate, decode_output_rotate
-from rpn_cxn import RPNplus
+from utils import *
 import pathlib
 import multiprocessing as mp
 
@@ -17,7 +16,7 @@ import multiprocessing as mp
 全局变量们,常量
 '''
 core_num = mp.cpu_count()
-pos_thresh = 0.3
+pos_thresh = 0.2
 neg_thresh = 0.1
 grid_width = grid_height = 16
 image_height, image_width = 1024, 1280
@@ -207,10 +206,10 @@ def compute_loss(target_scores, target_bboxes,
 
 if __name__ == '__main__':
     EPOCHS = 10 # 所有数据训练10遍
-    STEPS = 35  # 30*2=60个数据
-    batch_size = 2
+    STEPS = 32  # 30*2=60个数据
+    batch_size = 8
     lambda_scale = 1.
-    image_path,label_path = './train_imgs','./labels'
+    image_path,label_path = generate_train_img,generate_train_label
     TrainSet = DataGenerator(image_path,label_path, batch_size)  
     # 取出batch_size大小的iteration数据
     
@@ -224,6 +223,8 @@ if __name__ == '__main__':
         for step in range(STEPS):   # 遍历一次所有文件
             global_steps.assign_add(1)  # 每运行一次计数加1
             image_data, target_scores, target_bboxes, target_masks = next(TrainSet)
+            image_data = image_data[...,0]  # 变为1通道的灰度图
+            image_data = np.expand_dims(image_data, -1) # 还是用灰度图训练
             # 用迭代器每次取出batch_size数量的训练数据
             with tf.GradientTape() as tape:
                 pred_scores, pred_bboxes = model(image_data) # Forward pass
@@ -245,4 +246,6 @@ if __name__ == '__main__':
                 tf.summary.scalar("score_loss", score_loss, step=global_steps)
                 tf.summary.scalar("boxes_loss", boxes_loss, step=global_steps)
             writer.flush()
+            if global_steps % 10 == 0:  # 每过10步储存一次
+                model.save_weights("RPN.h5")
         model.save_weights("RPN.h5")

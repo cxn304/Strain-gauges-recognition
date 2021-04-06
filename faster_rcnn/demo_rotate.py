@@ -156,5 +156,5 @@ if __name__ == '__main__':
     
     plt.figure()
     canvas = plot_rboxes_on_image(faster_decode_image,
-                                  rects, color=[255, 0, 0]) # red boundig box
+                                  rects[:,:8], color=[255, 0, 0]) # red boundig box
     plt.imshow(canvas) 
