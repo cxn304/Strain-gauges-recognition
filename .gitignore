@@ -15,8 +15,8 @@ log/
 internal_reference/
 develop-eggs/
 dist/
+ximea/
 gauges/
-capture_folder/
 downloads/
 eggs/
 .eggs/
