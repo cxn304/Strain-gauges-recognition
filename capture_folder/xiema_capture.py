@@ -5,7 +5,7 @@ camera calibration
 '''
 
 import numpy as np
-import cv2, os, sys
+import cv2, os, sys,time,math
 import matplotlib.pyplot as plt
 from PyQt5 import QtCore, QtGui, QtWidgets
 from ximea import xiapi
@@ -98,6 +98,9 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         
         
     def cap_shoot(self):
+        '''
+        拍摄双目图像,通过点击
+        '''
         self.cam0.get_image(self.img0)
         self.cam1.get_image(self.img1)
         data0 = self.img0.get_image_data_numpy()
@@ -119,9 +122,25 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         self.imgcount = 0
         
         
+    def capture_moire(self):
+        '''
+        依次触发此函数拍摄moire图像,拍摄顺序非常重要,这里规定先拍横条纹,再拍竖条纹
+        再拍十字架,最后拍白图
+        '''
+        time_name = str(math.floor(time.time()*10)) # 返回当前的0.1秒数
+        self.cam0.get_image(self.img0)
+        self.cam1.get_image(self.img1)
+        data0 = self.img0.get_image_data_numpy()
+        data1 = self.img1.get_image_data_numpy()
+        cv2.imwrite('./moire_img/r_' + time_name + '.png' 
+                    , data0)
+        cv2.imwrite('./moire_img/l_' + time_name + '.png'
+                    , data1)
+        
+        
     def show_Moire_imgs(self):
         '''
-        打开8幅条纹图像并投影，投影间隙进行双目拍摄
+        打开8幅条纹图像并逐次投影,投影后500ms进行双目拍摄
         '''
         moire_img_index = 0     # 显示到第八幅图像要停
         all_img_path = './save_img/' # 条纹图像目录

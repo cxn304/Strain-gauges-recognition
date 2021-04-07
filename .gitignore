@@ -61,6 +61,8 @@ coverage.xml
 *.mo
 *.pot
 *.h5
+*.zip
+*.png
 *.bmp
 *.txt
 *.npz
