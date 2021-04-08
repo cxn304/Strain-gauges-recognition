@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1184</width>
-    <height>925</height>
+    <width>1493</width>
+    <height>585</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,10 @@
    <widget class="QLabel" name="pic_label">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>190</x>
       <y>10</y>
-      <width>851</width>
-      <height>871</height>
+      <width>1280</width>
+      <height>512</height>
      </rect>
     </property>
     <property name="text">
@@ -65,6 +65,20 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="reverse_cam_btn">
+       <property name="text">
+        <string>Reverse camera</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="autoCali_btn">
+       <property name="text">
+        <string>Auto calib capture</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
   </widget>
@@ -73,7 +87,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1184</width>
+     <width>1493</width>
      <height>18</height>
     </rect>
    </property>

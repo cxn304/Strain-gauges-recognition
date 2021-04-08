@@ -17,6 +17,7 @@ develop-eggs/
 dist/
 ximea/
 gauges/
+dth/
 downloads/
 eggs/
 .eggs/

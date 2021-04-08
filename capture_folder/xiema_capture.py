@@ -40,16 +40,14 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
     def __init__(self,parent=None):
         super(Capture,self).__init__(parent)
         self.setupUi(self)
-        self.slot_init()
-        '''
+
         self.cam0 = xiapi.Camera(0)
         self.cam1 = xiapi.Camera(1)
         self.cam0sn = self.cam0.get_device_info_string('device_sn')
         self.cam1sn = self.cam1.get_device_info_string('device_sn')
         self.imgcount = 0
         self.timer = QtCore.QTimer()
-        '''
-    
+        self.slot_init()
         
         
     def slot_init(self):    # 这里有时候名称要改
@@ -57,13 +55,15 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         self.capture_btn.clicked.connect(self.cap_shoot)
         self.stop_button.clicked.connect(self.stop_cap)
         self.moireButton.clicked.connect(self.show_Moire_imgs)
+        self.reverse_cam_btn.clicked.connect(self.reverse_camera)
+        self.autoCali_btn.clicked.connect(self.auto_cali)
         
     
     def start_cap(self):
         self.cam0.open_device() # l
         self.cam1.open_device() # r
-        self.cam0.set_exposure(17000)
-        self.cam1.set_exposure(17000)
+        self.cam0.set_exposure(15000)
+        self.cam1.set_exposure(15000)
         self.img0 = xiapi.Image()
         self.img1 = xiapi.Image()
         self.cam0.start_acquisition()
@@ -90,7 +90,7 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         self.cam1.get_image(self.img1)
         data0 = self.img0.get_image_data_numpy()    # l
         data1 = self.img1.get_image_data_numpy()
-        imgShow = np.concatenate((data0,data1),axis=0)
+        imgShow = np.concatenate((data0,data1),axis=1)
         img_pil = Image.fromarray(imgShow)
         img_pix = img_pil.toqpixmap()
         self.pic_label.setPixmap(img_pix)
@@ -105,14 +105,13 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         self.cam1.get_image(self.img1)
         data0 = self.img0.get_image_data_numpy()
         data1 = self.img1.get_image_data_numpy()
-        cv2.imwrite('./save_img/r' + str(self.imgcount) + '.bmp' 
+        cv2.imwrite('./save_img/r' + str(self.imgcount) + '.png' 
                     , data0)
-        cv2.imwrite('./save_img/l' + str(self.imgcount) + '.bmp' 
+        cv2.imwrite('./save_img/l' + str(self.imgcount) + '.png' 
                     , data1)
         self.imgcount = self.imgcount + 1
 
-        
-        
+              
     def stop_cap(self):
         self.timer.stop()
         self.cam0.stop_acquisition()
@@ -138,13 +137,23 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
                     , data1)
         
         
+    def reverse_camera(self):
+        '''
+        调换左右相机位置
+        '''
+        tmp = self.cam0
+        self.cam0 = self.cam1
+        self.cam1 = tmp
+        
+        
     def show_Moire_imgs(self):
         '''
         打开8幅条纹图像并逐次投影,投影后500ms进行双目拍摄
         '''
-        moire_img_index = 0     # 显示到第八幅图像要停
-        all_img_path = './save_img/' # 条纹图像目录
+        moire_img_index = 0
+        all_img_path = './fringe_example/' # 要投影的条纹图像目录
         moire_images = os.listdir(all_img_path)
+        example_imgs_num = len(moire_images)
         self.moire_label=QtWidgets.QLabel()# 这个label一定要self
         self.moire_label.resize(1920,1080)
         self.moire_label.show()
@@ -152,32 +161,60 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         def update_image():
             # 更换图像用的嵌套函数
             nonlocal moire_img_index 
-            def haha():
-                # 用于singleShot的lambda函数,作用是延迟500ms后拍摄
-                print(moire_images[moire_img_index])
             # nonlocal声明的变量不是局部变量,也不是全局变量,而是外部嵌套函数内的变量
-            update_img_path = all_img_path + moire_images[moire_img_index]
-            img = QtGui.QPixmap(update_img_path).scaled(
-            self.moire_label.width(), self.moire_label.height())
-            self.moire_label.setPixmap(img)
-            QtCore.QTimer.singleShot(500, lambda:haha()) 
-            # moire_img_index已经+1,说明等update_image执行完才执行singleShot
-            moire_img_index += 1
-            if moire_img_index >= 8:
+            if moire_img_index < example_imgs_num:
+                if moire_img_index<example_imgs_num-2:  #  动态调整曝光
+                    self.cam0.set_exposure(15000)
+                    self.cam1.set_exposure(15000)
+                else:
+                    self.cam0.set_exposure(4000)
+                    self.cam1.set_exposure(5000)
+                update_img_path = all_img_path + moire_images[moire_img_index]
+                img = QtGui.QPixmap(update_img_path).scaled(
+                self.moire_label.width(), self.moire_label.height())
+                self.moire_label.setPixmap(img)
+                # moire_img_index已经+1,说明等update_image执行完才执行singleShot
+                # 连续拍摄2张求平均以保证没有噪声
+                QtCore.QTimer.singleShot(250, lambda:self.capture_moire())
+                # QtCore.QTimer.singleShot(700, lambda:self.capture_moire())
+                moire_img_index += 1
+            else:
                 ttimer.stop()
                 ttimer.deleteLater() # 清除自身
                 del self.moire_label # 成功删除此label
-                moire_img_index = 0
+     
+        ttimer = QtCore.QTimer()
+        ttimer.timeout.connect(update_image)
+        ttimer.start(500)
+
+
+    def auto_cali(self):
+        imgs_num = 0
+        self.moire_label=QtWidgets.QLabel()# 这个label一定要self
+        self.moire_label.resize(1920,1080)
+        self.moire_label.show()
+        self.moire_label.showFullScreen()
+        img = QtGui.QPixmap('./fringe_example/z.png').scaled(
+                self.moire_label.width(), self.moire_label.height())
+        self.moire_label.setPixmap(img)
+        def update_image():
+            # 更换图像用的嵌套函数
+            nonlocal imgs_num 
+            QtCore.QTimer.singleShot(1000, lambda:self.cap_shoot())
+            imgs_num += 1
+            if imgs_num>13:
+                ttimer.stop()
+                ttimer.deleteLater() # 清除自身
+                del self.moire_label # 成功删除此label
         
         ttimer = QtCore.QTimer()
         ttimer.timeout.connect(update_image)
-        ttimer.start(2000)
-
+        ttimer.start(2000)  # 两秒换一个标定板姿态
+        return
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    # pool = mp.Pool(processes=4)
     ui = Capture()
     ui.show()
     sys.exit(app.exec_())

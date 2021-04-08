@@ -2,43 +2,43 @@ m=1920;
 n=1080;
 
 % % 两列黑一列白
-
-k=6;   
-for s=1:k
-    I1=zeros(n,m);
-    for i=1:n
-        for j=1:m/k
-            t=k*j+s;
-            if t>m
-                t=t-m;
-            end
-            I1(i,t)=255;
-            
-            t=k*j+s+1;
-            if t>m
-                t=t-m;
-            end
-            I1(i,t)=255;
-            
-            t=k*j+s+2;
-            if t>m
-                t=t-m;
-            end
-            I1(i,t)=0;
-            
-            t=k*j+s+3;
-            if t>m
-                t=t-m;
-            end
-            I1(i,t)=0;
-       %% I1(i,k*j+1)=255;
-       %% I1(i,k*j+2)=255;
-       %% I1(i,k*j+3)=255;
-        end
-    end
-    I1=uint8(I1);
-    imwrite(I1,['./' num2str(m) '_' num2str(n) '_' num2str(k) '_' num2str(s) '.png']);
-end
+% 
+% k=6;   
+% for s=1:k
+%     I1=zeros(n,m);
+%     for i=1:n
+%         for j=1:m/k
+%             t=k*j+s;
+%             if t>m
+%                 t=t-m;
+%             end
+%             I1(i,t)=255;
+%             
+%             t=k*j+s+1;
+%             if t>m
+%                 t=t-m;
+%             end
+%             I1(i,t)=255;
+%             
+%             t=k*j+s+2;
+%             if t>m
+%                 t=t-m;
+%             end
+%             I1(i,t)=0;
+%             
+%             t=k*j+s+3;
+%             if t>m
+%                 t=t-m;
+%             end
+%             I1(i,t)=0;
+%        %% I1(i,k*j+1)=255;
+%        %% I1(i,k*j+2)=255;
+%        %% I1(i,k*j+3)=255;
+%         end
+%     end
+%     I1=uint8(I1);
+%     imwrite(I1,['./' num2str(m) '_' num2str(n) '_' num2str(k) '_' num2str(s) '.png']);
+% end
 
 
 %% 十字架
@@ -49,7 +49,7 @@ z(:,960:961)=0;
 imagesc(z);
 
 z=uint8(z);
-imwrite(z,'./cross.jpg');
+imwrite(z,'./cross.png');
 
 
 
@@ -114,15 +114,15 @@ end
 % % I=uint8(I);
 % % imwrite(I,['E:\matlab\3840_2160_6.bmp']);
 
-m=1920;
-n=1080;
-T=4;
-k=4;
-a=[255 255 0 0;255 0 0 255;0 0 255 255;0 255 255 0];
-for i=1:k
-    I1=repmat(a(:,i),n/4,m);
-    I1=uint8(I1);
-    imwrite(I1,['./heng_' num2str(T) '_' num2str(m) '_' num2str(n) '_row' num2str(i) '.png']);
-end
+% m=1920;
+% n=1080;
+% T=8;
+% k=8;
+% a=[255 255 0 0;255 0 0 255;0 0 255 255;0 255 255 0];
+% for i=1:k
+%     I1=repmat(a(:,i),n/4,m);
+%     I1=uint8(I1);
+%     imwrite(I1,['./heng_' num2str(T) '_' num2str(m) '_' num2str(n) '_row' num2str(i) '.png']);
+% end
 
 
