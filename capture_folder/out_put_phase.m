@@ -1,149 +1,130 @@
-
+clear
 %%
 %参数设置
 imgDir='./moire_img/';    %总文件夹
-files = dir([imgDir,'*.','png']);
-len = length(files);
-lfile = {};
-rfile = {};
-for i = 1:len  % 区分左相机和右相机拍摄的图片
-    if strfind(files(i).name , 'l')
-        lfile{i} = files(i).name;
-    else
-        rfile{i-len/2} = files(i).name;
+usefolders = find_folders(imgDir);
+len = length(usefolders);
+for iii = 1:len
+    nowdir = [imgDir usefolders{iii} '/'];
+    files = dir([nowdir,'*.','png']);
+    imglen = length(files);
+    lfile = {};
+    rfile = {};
+    allfile = {};
+    for i = 1:imglen  % 区分左相机和右相机拍摄的图片
+        if strfind(files(i).name , 'l')
+            lfile{i} = files(i).name;
+        else
+            rfile{i-imglen/2} = files(i).name;
+        end
+        allfile{i} = files(i).name;
+    end
+    
+    lshizi=imread([nowdir,lfile{9}]); %  左图十字
+    lwu = imread([nowdir,lfile{10}]); %  左图无十字
+    %     [clx,cly,pixelsize] = find_cross_point(lshizi,uint8(mean(avepics,3)));
+    imshow(lshizi)
+    [clx,cly] = ginput(1);
+    clx = int32(clx);
+    cly = int32(cly);
+    rshizi=imread([nowdir,rfile{9}]);
+    rwu = imread([nowdir,rfile{10}]);
+    %     [crx,cry,~] = find_cross_point(rshizi,rwu);
+    imshow(rshizi)
+    [crx,cry] = ginput(1);
+    crx = int32(crx);
+    cry = int32(cry);
+    [height,width] = size(lshizi);
+    [maskl,maskr] = find_intersection_area(clx,cly,crx,cry,height,width);
+    
+    zhouqi=zeros(1,4);
+    avepics = zeros(height,width,4);
+    for i=1:4  % 循环的是{'L\heng\','L\shu\','R\heng\','R\shu\'}
+        [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
+            ,maskl,clx,cly,crx,cry);
+        [phi,im_mag]=fourstepbasedphase(avepics,4); % phi与原图维度一致
+        thing_mask = find_specie(phi,height,width);
+        % phi是解出来的相位
+        clear avepics
+        % save([imgDir,obj,'\',namewrap{i},'.asc'],'phi','-ASCII');
+        [deri,~]=derical(phi,thing_mask,zp);
+        figure
+        imagesc(deri)
+        % imagesc(A) 将矩阵A中的元素数值按大小转化为不同颜色，
+        % 并在坐标轴对应位置处以这种颜色染色
+        unwrap=goodscan(deri,thing_mask,phi,sss,width);
+        A=~isnan(unwrap);
+        % A=~isnan((0./fix(deri)+1).*mask);
+        se=strel('diamond',1);
+        A=(imdilate(A,se)-A).*im_mask;
+        l=find(A(:)==1);
+        adjoin=nan(length(l)*5,1);
+        adjoin(1:length(l),1)=l;
+        clear l
+        phi=im_mask.*phi;
+        unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
+        zhouqi(i)=unwrap(zp(1),zp(2))/pi;
+        unwrap=unwrap-round(zhouqi(i))*pi;%横竖有关
+        figure(i)
+        imagesc(unwrap);
+        clear unwrap
     end
 end
-% obj=input('待测物子文件夹名','s');
-% calibsub=input('标定文件夹名','s');
-% name={'L\heng\','L\shu\','R\heng\','R\shu\'};
-% namewrap={'L_heng','L_shu','R_heng','R_shu'};
-% imgnum=4;                         %相移张数
-% gammaflag=0;%1=on;
-% deta=[];
-% winsize=[];
-% if isempty(gammaflag)||gammaflag==0
-%     gammaflag=0;
-% else
-%     gammaflag=1;
-%     deta=input('输入sigma滤波参数:');
-%     if isempty(deta)
-%         deta=3;
-%     end
-%     winsize=input('输入sigma滤波窗口:');
-%     if isempty(deta)
-%         winsize=7;
-%     end
-% end
-
-
-lshizi=imread([imgDir,lfile{9}]); %  左图十字
-lwu = imread([imgDir,lfile{10}]); %  左图无十字
-[clx,cly,pixelsize] = find_cross_point(lshizi,lwu);
-rshizi=imread([imgDir,rfile{9}]);
-rwu = imread([imgDir,rfile{10}]);
-[crx,cry,~] = find_cross_point(rshizi,rwu);
 %%
-%初始化参数
-% figure(1)
-% zpl=zerophase([imgDir,lfile{9}]);  %左图十字坐标
-% figure(2)
-% zpr=zerophase([imgDir,rfile{9}]);  %右图十字座标
-
-cutflag=0;
-calibcutflag=0;
-if (strcmp(input('按任意键进行图片剪裁(左上到右下);回车取消','s'),'') )
-    hlc=[1 pixelsize(1)];
-    slc=[1 pixelsize(2)];
-    src=slc;hrc=hlc;
-    height=hlc(2)-hlc(1)+1;
-    width=slc(2)-slc(1)+1;
-else
-    hlc=clx;
-    slc=cly;
-    hrc = crx;
-    src = cry;
-    
-    height=max(hlc(2)-hlc(1),hrc(2)-hrc(1))+1;%使左右图大小相等??什么意思
-    width=max(slc(2)-slc(1),src(2)-src(1))+1;
-    hlc(2)=hlc(1)+height-1;
-    hrc(2)=hrc(1)+height-1;
-    slc(2)=slc(1)+width-1;
-    src(2)=src(1)+width-1;
-    if (strcmp(input('按回车键剪裁标定图片','s'),'') )
-        calibcutflag=1;
-        %calib cut
+function img = find_specie(phi,height,width)
+% 找出物体位置
+b=ones(height,width);
+b(phi==0)=0;
+se1=strel('disk',2);
+b=imopen(b,se1);
+b=imclose(b,se1);
+imLabel = bwlabel(b);                %对各连通域进行标记
+stats = regionprops(imLabel,'Area');    %求各连通域的大小
+area = cat(1,stats.Area);
+index = find(area == max(area));        %求最大连通域的索引
+img = ismember(imLabel,index);          %获取最大连通域图像
+end
+%%
+function [usefolders] = find_folders(dirs)
+% 解包folder
+folders = dir(dirs);
+usefolders = {};
+k=1;
+for i = 1:length(folders)
+    if ~isempty(strfind(folders(i).name,'16'))
+        usefolders{k}=folders(i).name;
+        k = k+1;
     end
 end
-
-maskflag=0;
-if (strcmp(input('按回车键创建掩膜','s'),'') )
-    maskflag=1;
-    sl=imread([imgDir,lfile{9}]);
-    slmask=double(imread([imgDir,obj,'\slmask.bmp']));
-    maskl=masked(sl(hlc(1):hlc(2),slc(1):slc(2)));
-    maskl(slmask==0)=nan;
-    srmask=double(imread([imgDir,obj,'\srmask.bmp']));
-    sr=imread([imgDir,rfile{9}]);
-    maskr=masked(sr(hrc(1):hrc(2),src(1):src(2)));
-    srmask=double(imread([imgDir,obj,'\srmask.bmp']));
-    maskr(srmask==0)=nan;
 end
-
-zpl=zpl+1-[hlc(1),slc(1)];
-zpr=zpr+1-[hrc(1),src(1)];
-
-if calibcutflag==1
-    calibcut(imgDir,calibsub);
+%%
+function [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
+    ,maskl,clx,cly,crx,cry)
+% 创建平均图像并返回十字中心坐标和计算区域掩膜
+if i<=2  % 前2步相移
+    avepics(:,:,1) = imread([nowdir,allfile{4*(i-1)+1}]);
+    avepics(:,:,2) = imread([nowdir,allfile{4*(i-1)+2}]);
+    avepics(:,:,3) = imread([nowdir,allfile{4*(i-1)+3}]);
+    avepics(:,:,4) = imread([nowdir,allfile{4*(i-1)+4}]);
+    avepics=avepics.*maskl;
+    zp=[clx,cly]; % zp表示十字中心
+    sss=0;
+    im_mask=maskl;
+else   % 最后2步相移
+    avepics(:,:,1) = imread([nowdir,allfile{4*(i-1)+1+2}]);
+    avepics(:,:,2) = imread([nowdir,allfile{4*(i-1)+2+2}]);
+    avepics(:,:,3) = imread([nowdir,allfile{4*(i-1)+3+2}]);
+    avepics(:,:,4) = imread([nowdir,allfile{4*(i-1)+4+2}]);
+    avepics=avepics.*maskr;
+    zp=[crx,cry];
+    sss=1;
+    im_mask=maskr;
 end
-zhouqi=zeros(1,4);
-for i=1:4  %name
-    avepics=ave([imgDir,obj,'\',name{i}],imgnum,pixelsize,gammaflag,deta,winsize,[]);%求平均
-    if i<3
-        avepics=avepics(hlc(1):hlc(2),slc(1):slc(2),:);
-        zp=zpl;
-        sss=0;
-        if maskflag==1
-            im_mask=maskl;
-        end
-    else
-        avepics=avepics(hrc(1):hrc(2),src(1):src(2),:);
-        zp=zpr;
-        sss=1;
-        if maskflag==1
-            im_mask=maskr;
-        end
-    end
-    [phi,im_mag]=fourstepbasedphase(avepics,imgnum);
-    clear avepics
-    % save([imgDir,obj,'\',namewrap{i},'.asc'],'phi','-ASCII');
-    deri=derical(phi,im_mask,zp);
-    figure(10)
-    imagesc(deri)
-    unwrap=goodscan(deri,im_mask,phi,sss);
-    A=~isnan(unwrap);
-    % A=~isnan((0./fix(deri)+1).*mask);
-    se=strel('diamond',1);
-    A=(imdilate(A,se)-A).*im_mask;
-    l=find(A(:)==1);
-    adjoin=nan(length(l)*5,1);
-    adjoin(1:length(l),1)=l;
-    clear l
-    phi=im_mask.*phi;
-    unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
-    clear IM im_mag
-    zhouqi(i)=unwrap(zp(1),zp(2))/pi;
-    unwrap=unwrap-round(zhouqi(i))*pi;%横竖有关
-    
-    eval([namewrap{i} ' = unwrap;']);
-    save([imgDir,obj,'\',namewrap{i},'.mat'],namewrap{i});
-    eval(['clear ',namewrap{i},';']);
-    figure(i)
-    imagesc(unwrap);
-    clear unwrap
 end
 %%
 function [xx,yy,pixelsize] = find_cross_point(lshizi,lwu)
 % 自动识别十字叉中心点坐标
+lwu(find(lwu>10)) = lwu(find(lwu>10))+7;    % 有待检验
 zuoshizitu = lwu-lshizi;
 pixelsize=size(lshizi);    %初始图像尺寸1024,1280
 zuoshizitu = imbinarize(zuoshizitu);
@@ -196,14 +177,8 @@ end
 function [IM,im_mag]=fourstepbasedphase(aveimg,pixelstep)
 %8像素pixelstep=8
 %16像素pixelstep=16 每四相移之间的周期（2pi）间隔
-
-row=size(aveimg,1);
-colomn=size(aveimg,2);
 cycle=fix(pixelstep/4);
 % 计算相位
-
-fi1=zeros(row,colomn);
-fi2=zeros(row,colomn);
 fi1=atan2(aveimg(:,:,4)-aveimg(:,:,2),aveimg(:,:,1)-aveimg(:,:,3));%atan2(y,x)=atan(y/x),返回-pi到pi之间的值  (-pi,pi]
 im_mag=(aveimg(:,:,4)-aveimg(:,:,2)).^2+(aveimg(:,:,1)-aveimg(:,:,3)).^2;
 IM=fi1;
@@ -216,7 +191,8 @@ end
 IM=IM/cycle;
 end
 %%
-function IM_unwrapped = GuidedFloodFill3(IM_phase, IM_unwrapped, adjoin ,derivative_variance)
+function IM_unwrapped = GuidedFloodFill3(IM_phase, IM_unwrapped, ...
+    adjoin ,derivative_variance)
 
 if size(adjoin,1)==0
     IM_unwrapped =IM_unwrapped ;
@@ -247,7 +223,8 @@ else
             if(r_active+1<=r_dim)  % Is this a valid index?
                 if ~isnan(IM_unwrapped(r_active+1, c_active))
                     
-                    phase_ref(1) = IM_unwrapped(r_active+1, c_active)+IM_phase(r_active, c_active)-IM_phase(r_active+1, c_active)...
+                    phase_ref(1) = IM_unwrapped(r_active+1, c_active)...
+                        +IM_phase(r_active, c_active)-IM_phase(r_active+1, c_active)...
                         -2*pi*round((IM_phase(r_active, c_active)-IM_phase(r_active+1, c_active))/2/pi);       % Obtain the reference unwrapped phase
                     qualityneighbor(1)=derivative_variance(r_active+1, c_active);
                     
@@ -286,11 +263,7 @@ else
                     phase_ref(3) = IM_unwrapped(r_active, c_active+1)+IM_phase(r_active, c_active)-IM_phase(r_active, c_active+1)...
                         -2*pi*round((IM_phase(r_active, c_active)-IM_phase(r_active, c_active+1))/2/pi);
                     qualityneighbor(3)=derivative_variance(r_active, c_active+1);
-                    %Obtain the reference unwrapped phase
-                    %       D = IM_phase(r_active, c_active)-phase_ref;
-                    %       deltap = atan2(sin(D),cos(D));   % Make it modulo +/-pi
-                    %       phasev(3) = phase_ref + deltap;  % This is the unwrapped phase
-                    %       IM_magv(3)= IM_mag(r_active, c_active+1);
+
                 else % unwrapped_binary(r_active, c_active+1)==0
                     if(~isnan(IM_phase(r_active, c_active+1))*adjoinmap(r_active, c_active+1)==1)
                         k=k+1;
@@ -306,11 +279,7 @@ else
                     phase_ref(4) = IM_unwrapped(r_active, c_active-1)+IM_phase(r_active, c_active)-IM_phase(r_active, c_active-1)...
                         -2*pi*round((IM_phase(r_active, c_active)-IM_phase(r_active, c_active-1))/2/pi);
                     qualityneighbor(4)=derivative_variance(r_active, c_active-1);
-                    %Obtain the reference unwrapped phase
-                    %       D = IM_phase(r_active, c_active)-phase_ref;
-                    %       deltap = atan2(sin(D),cos(D));   % Make it modulo +/-pi
-                    %       phasev(4) = phase_ref + deltap;  % This is the unwrapped phase
-                    %       IM_magv(4)= IM_mag(r_active, c_active-1);
+
                 else % unwrapped_binary(r_active, c_active-1)==0
                     if(~isnan(IM_phase(r_active, c_active-1))*adjoinmap(r_active, c_active-1)==1)
                         k=k+1;
@@ -323,15 +292,7 @@ else
             [IM_max,m] = max(qualityneighbor);
             %     idx_max = find((IM_magv >= 0.99*IM_max) & (idx_del==1));
             IM_unwrapped(r_active, c_active) =phase_ref(m);  % Use the first, if there is a tie
-            
-            %     if isnan(phase_ref(m))
-            %         k
-            %         qualityneighbor
-            %         phase_ref
-            %         r_active
-            %         c_active
-            %     end
-            
+
         end % while sum(sum(adjoin(2:r_dim-1,2:c_dim-1))) ~= 0  %Loop until there are no more adjoining pixels
     else
         
@@ -397,15 +358,10 @@ else
                     end
                 end
             end
-            
-            
+
             IM_unwrapped(r_active, c_active) =phase_ref;
-            
-            
-            %end
-            
+
         end % while sum(sum(adjoin(2:r_dim-1,2:c_dim-1))) ~= 0  %Loop until there are no more adjoining pixels
-        
     end
     return
 end
@@ -415,50 +371,233 @@ end
 function [A,Aorigin]=derical(phi,im_mask,zp)
 %phi阶段相位，im_mask掩膜；zp十字中心
 %质量图，【0,1】，1比较好；后面的1.5；0.9可调
-dimx=size(phi,1);
-dimy=size(phi,2);
-A=zeros(size(phi,1),size(phi,2));
+row=size(phi,1);   % row
+col=size(phi,2);   % col
+A=zeros(row,col);
 du=phi(3:size(phi,1),2:size(phi,2)-1)-phi(2:size(phi,1)-1,2:size(phi,2)-1);
 du=du-2*pi*round(du/2/pi);
 
-mean_du = (du(2:dimx-3, 2:dimy-3)+du(2:dimx-3,1:dimy-4)+du(...
-    2:dimx-3,3:dimy-2)+du(1:dimx-4,2:dimy-3)+du(3:dimx-2,2:dimy-3))./5;
-% stdvaru = sqrt( (du(3:dimx-2, 3:dimy-2) - mean_du).^2 + (du(3:dimx-2,2:dimy-3) - mean_du).^2 + ...
-%               (du(3:dimx-2,4:dimy-1) - mean_du).^2 + (du(2:dimx-3,3:dimy-2) - mean_du).^2 + (du(4:dimx-1,3:dimy-2) - mean_du).^2 );
+mean_du = (du(2:row-3, 2:col-3)+du(2:row-3,1:col-4)+du(...
+    2:row-3,3:col-2)+du(1:row-4,2:col-3)+du(3:row-2,2:col-3))./5;
+% stdvaru = sqrt( (du(3:row-2, 3:col-2) - mean_du).^2 + (du(3:row-2,2:col-3) - mean_du).^2 + ...
+%               (du(3:row-2,4:col-1) - mean_du).^2 + (du(2:row-3,3:col-2) - mean_du).^2 + (du(4:row-1,3:col-2) - mean_du).^2 );
 
 dv=phi(2:size(phi,1)-1,3:size(phi,2))-phi(2:size(phi,1)-1,2:size(...
     phi,2)-1);
 dv=dv-2*pi*round(dv/2/pi);
 
-mean_dv = (du(2:dimx-3, 2:dimy-3)+ du(2:dimx-3,1:dimy-4)+ du(...
-    2:dimx-3,3:dimy-2)+ du(1:dimx-4,2:dimy-3)+du(3:dimx-2,2:dimy-3))./5;
-% stdvarv = sqrt( (dv(3:dimx-2, 3:dimy-2) - mean_dv).^2 + (dv(3:dimx-2,2:dimy-3) - mean_dv).^2 + ...
-%               (dv(3:dimx-2,4:dimy-1) - mean_dv).^2 + (dv(2:dimx-3,3:dimy-2) - mean_dv).^2 + (dv(4:dimx-1,3:dimy-2) - mean_dv).^2 );
+mean_dv = (du(2:row-3, 2:col-3)+ du(2:row-3,1:col-4)+ du(...
+    2:row-3,3:col-2)+ du(1:row-4,2:col-3)+du(3:row-2,2:col-3))./5;
+% stdvarv = sqrt( (dv(3:row-2, 3:col-2) - mean_dv).^2 + (dv(3:row-2,2:col-3) - mean_dv).^2 + ...
+%               (dv(3:row-2,4:col-1) - mean_dv).^2 + (dv(2:row-3,3:col-2) - mean_dv).^2 + (dv(4:row-1,3:col-2) - mean_dv).^2 );
 
-A(3:dimx-2, 3:dimy-2)=(sqrt( (du(2:dimx-3, 2:dimy-3) - mean_du).^2 + (...
-    du(2:dimx-3,1:dimy-4) - mean_du).^2 + ...
-    (du(2:dimx-3,3:dimy-2) - mean_du).^2 + (du(1:dimx-4,2:dimy-3) - mean_du).^2 + (du(3:dimx-2,2:dimy-3) - mean_du).^2 )+...
-    sqrt( (dv(2:dimx-3, 2:dimy-3) - mean_dv).^2 + (dv(2:dimx-3,1:dimy-4) - mean_dv).^2 + ...
-    (dv(2:dimx-3,3:dimy-2) - mean_dv).^2 + (dv(1:dimx-4,2:dimy-3) - mean_dv).^2 + (dv(3:dimx-2,2:dimy-3) - mean_dv).^2 ))/4;
+A(3:row-2, 3:col-2)=(sqrt( (du(2:row-3, 2:col-3) - mean_du).^2 + (...
+    du(2:row-3,1:col-4) - mean_du).^2 + ...
+    (du(2:row-3,3:col-2) - mean_du).^2 + (du(1:row-4,2:col-3) -...
+    mean_du).^2 + (du(3:row-2,2:col-3) - mean_du).^2 )+...
+    sqrt( (dv(2:row-3, 2:col-3) - mean_dv).^2 + (dv(2:row-3,1:col-4)...
+    - mean_dv).^2 + ...
+    (dv(2:row-3,3:col-2) - mean_dv).^2 + (dv(1:row-4,2:col-3)...
+    - mean_dv).^2 + (dv(3:row-2,2:col-3) - mean_dv).^2 ))/4;
 
-% A(3:dimx-2, 3:dimy-2)=0.25./max(A(3:dimx-2, 3:dimy-2),0.25);
+% A(3:row-2, 3:col-2)=0.25./max(A(3:row-2, 3:col-2),0.25);
 Aorigin=A;%噪声大小没有上限，噪声越大A越大；
 yuzhiqu=A(zp(1)-5:zp(1)+5,zp(2)-5:zp(2)+5);
 yuzhiqu=sort(yuzhiqu(:));
 yuzhi=yuzhiqu(fix(sum(~isnan(yuzhiqu))*0.9))*1.5;
 
 A=yuzhi./max(A,yuzhi);
-return;
 end
 %%
 function A=masked(img)
 %通过亮度对比，创建简单的掩膜
 %A:计算区域=1；非计算区域=nan；
 %调整结构元素
-    A=imbinarize(img);
-    A=imopen(A,strel('square',3));
-    A=imclose(A,strel('square',2));
-    A=imopen(A,strel('square',9));
-    imshow(A)%显示该图
-    set(gcf,'outerposition',get(0,'screensize'));
+A=imbinarize(img);
+A=imopen(A,strel('square',3));
+A=imclose(A,strel('square',2));
+A=imopen(A,strel('square',9));
+imshow(A)%显示该图
+set(gcf,'outerposition',get(0,'screensize'));
 end
+%% 找出左右相机交叉区域
+function [maskl,maskr]=find_intersection_area(clx,cly,crx,cry,height,width)
+if clx>crx
+    maxwl = width;
+    minwl = clx - crx;
+    maxwr = width - (clx-crx);
+    minwr = 1;
+else
+    maxwl = width - (crx-clx);
+    minwl = 1;
+    maxwr = width;
+    minwr = crx-clx;
+end
+if cly>cry
+    maxhl = height;
+    minhl = cly - cry;
+    maxhr = height - (cly - cry);
+    minhr = 1;
+else
+    maxhl = height - (cry-cly);
+    minhl = 1;
+    maxhr = height;
+    minhr = cry-cly;
+end
+maskl = zeros(height,width);
+maskl(minhl:maxhl,minwl:maxwl) = 1;
+maskr = zeros(height,width);
+maskr(minhr:maxhr,minwr:maxwr) = 1;
+end
+%%
+function pjj=ave(imgdir,imgnum,pixelsize,gammaflag,deta,winsize,Imgref)
+%%if gammaflag==1 do gamma filter，deta，winsize,Imgref不用管
+%imgdir:路径；imgnum：相移次数；pixelsize：图片大小，二维矩阵，行，列
+%pjj:平均后的三维矩阵，图片行*图片列*相移张数
+imgDir=imgdir;
+oldPwd = pwd;
+pjj=zeros(pixelsize(1),pixelsize(2),imgnum);
+
+for i=1:imgnum                                           %% 平均云纹图像
+    cd([imgDir,num2str(i),'\']);
+    x = dir;
+    listOfImages = [];
+    for j = 1:length(x)
+        if x(j).isdir == 0
+            listOfImages = [listOfImages; x(j)];
+        end
+    end
+    
+    for j = 1:length(listOfImages)
+        fileName = listOfImages(j).name;
+        rfid=[imgDir,num2str(i),'\',fileName];
+        Irgb=imread(rfid);
+        Iset{j}=Irgb;
+    end
+    
+    pj=zeros(size(Iset{1}));
+    for j = 1:length(listOfImages)
+        ISE=double(Iset{j});
+        pj=pj+ISE;
+    end
+    pj=pj/length(listOfImages);   % pj表示一个相移中所有图像的平均
+    pj(pj>254)=nan;
+    if gammaflag==1
+        pj=gamma_filter(pj,Imgref,deta,winsize);
+    end
+    pjj(:,:,i)=pj;
+end
+
+cd(oldPwd);
+end
+%%
+function unwrap=goodscan(deri,mask,phi,sss,width)
+% maxline=20;
+dimx=size(phi,1);   % row
+dimy=size(phi,2);   % col
+% linumber=dimx*3;
+mask=(0./fix(deri)+1).*mask;
+% [r,rowref ]=max(sum(mask,2));
+phi=mask.*phi;%phi; area of quality==1
+C=~isnan(phi);%对非计算域进行膨胀操作，找出连通路径A4=imdilate(A3,se)
+cloumnref = width-5;
+cc=C(:,cloumnref);
+k=find(cc==1);
+rowref=k(fix(numel(k)/2));
+colref=cloumnref;
+edl=cloumnref+2;
+unwrap=nan(dimx,dimy);
+unwrap(rowref,colref)=phi(rowref, colref);
+adjoin=nan(dimx*(edl-cloumnref+1),2);
+k=0;
+if ~isnan(phi(rowref, colref+1))==1&&colref+1<=edl
+    k=k+1;adjoin(k,:)=[rowref, 2];
+end
+if ~isnan(phi(rowref-1, colref))==1
+    k=k+1;adjoin(k,:)=[rowref-1, 1];
+end       %Mark the pixels adjoining the selected point
+if ~isnan(phi(rowref+1, colref))==1
+    k=k+1;adjoin(k,:)=[rowref+1, 1];
+end
+unwrap(:,cloumnref:edl) = GuidedFloodFill3(phi(:,cloumnref:edl), ...
+    unwrap(:,cloumnref:edl), adjoin,[]);
+adjoin=nan(dimx,1);
+if edl==dimy-2
+else
+    for i=edl+1:dimy-2
+        unwrap(:,i)=unwrap(:,i-1)+phi(:,i)-phi(:,i-1)-2*pi*round(...
+            (phi(:,i)-phi(:,i-1))/2/pi);
+        l=find(isnan(unwrap(3:dimx-2,i))-isnan(unwrap(4:dimx-1,i))...
+            ==1&~isnan(phi(3:dimx-2,i)))+2;
+        adjoin(1:length(l))=l;
+        unwrap(:,i)=unwrapline(phi(:,i), unwrap(:,i), adjoin,length(l),1);%up
+        l=find(isnan(unwrap(3:dimx-2,i))-isnan(unwrap(4:dimx-1,i))==...
+            -1&~isnan(phi(4:dimx-1,i)))+3;
+        adjoin(1:length(l))=l;
+        unwrap(:,i)=unwrapline(phi(:,i), unwrap(:,i), adjoin,length(l),-1);
+    end
+end
+if cloumnref==3
+else
+    for i=cloumnref-1:-1:3
+        unwrap(:,i)=unwrap(:,i+1)+phi(:,i)-phi(:,i+1)-2*pi*round((phi(:,i)-phi(:,i+1))/2/pi);
+        l=find(isnan(unwrap(3:dimx-2,i))-isnan(unwrap(4:dimx-1,i))==1&~isnan(phi(3:dimx-2,i)))+2;
+        adjoin(1:length(l))=l;
+        unwrap(:,i)=unwrapline(phi(:,i), unwrap(:,i), adjoin,length(l),1);
+        l=find(isnan(unwrap(3:dimx-2,i))-isnan(unwrap(4:dimx-1,i))==-1&~isnan(phi(4:dimx-1,i)))+3;
+        adjoin(1:length(l))=l;
+        unwrap(:,i)=unwrapline(phi(:,i), unwrap(:,i), adjoin,length(l),-1);
+    end
+end
+end
+%%
+function IM_unwrapped =unwrapline(IM_phase,IM_unwrapped,adjoin,k,direction)
+r_dim= length(IM_phase);
+%%%%%%%%%adjoin还是各矩阵是否更改
+if direction==-1%downwards
+    while k~=0 %Loop until there are no more adjoining pixels
+        r_active=adjoin(k);
+        adjoin(k)=NaN;
+        k=k-1;  
+        %Then search above
+        if(r_active-1>=1)  % Is this a valid index?
+            if ~isnan(IM_unwrapped(r_active-1))
+                IM_unwrapped(r_active)= IM_unwrapped(r_active-1)...
+                    +IM_phase(r_active)-IM_phase(r_active-1)...
+                    -2*pi*round((IM_phase(r_active)-IM_phase(...
+                    r_active-1))/2/pi);
+                if (r_active+1<=r_dim)
+                    if(~isnan(IM_phase(r_active+1)))
+                        k=k+1;
+                        adjoin(k)=r_active+1; % Put the elgible, still-wrapped neighbors of this pixels in the adjoin set
+                    end
+                end
+            end
+        end
+        
+    end % while sum(sum(adjoin(2:r_dim-1,2:c_dim-1))) ~= 0  %Loop until there are no more adjoining pixels
+elseif direction==1%'upwards'
+    while k~=0 %Loop until there are no more adjoining pixels
+        r_active=adjoin(k);
+        adjoin(k)=NaN;
+        k=k-1;
+        
+        if(r_active+1<=r_dim)  % Is this a valid index?
+            if ~isnan(IM_unwrapped(r_active+1))
+                IM_unwrapped(r_active) = IM_unwrapped(r_active+1)...
+                    +IM_phase(r_active)-IM_phase(r_active+1)...
+                    -2*pi*round((IM_phase(r_active)-IM_phase(...
+                    r_active+1))/2/pi);       % Obtain the reference unwrapped phase
+                if (r_active-1>0)
+                    if(~isnan(IM_phase(r_active-1)))
+                        k=k+1;
+                        adjoin(k)=r_active-1;
+                    end
+                end
+            end
+        end
+    end
+end
+return
+end
+

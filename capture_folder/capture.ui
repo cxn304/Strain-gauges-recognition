@@ -75,7 +75,7 @@
      <item>
       <widget class="QPushButton" name="autoCali_btn">
        <property name="text">
-        <string>Auto calib capture</string>
+        <string>Auto calib</string>
        </property>
       </widget>
      </item>
@@ -91,8 +91,38 @@
      <height>18</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuauto_exposure">
+    <property name="title">
+     <string>auto exposure</string>
+    </property>
+    <addaction name="actioncam0_fringe"/>
+    <addaction name="actioncam1_fringe"/>
+    <addaction name="actioncam0_white"/>
+    <addaction name="actioncam1_white"/>
+   </widget>
+   <addaction name="menuauto_exposure"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actioncam0_fringe">
+   <property name="text">
+    <string>cam0 fringe</string>
+   </property>
+  </action>
+  <action name="actioncam1_fringe">
+   <property name="text">
+    <string>cam1 fringe</string>
+   </property>
+  </action>
+  <action name="actioncam0_white">
+   <property name="text">
+    <string>cam0 white</string>
+   </property>
+  </action>
+  <action name="actioncam1_white">
+   <property name="text">
+    <string>cam1 white</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

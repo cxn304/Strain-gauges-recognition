@@ -43,16 +43,17 @@ n=1080;
 
 %% 十字架
 
-z=255*ones(1080,1920);
+z=150*ones(1080,1920);
 z(540:541,:)=0;
 z(:,960:961)=0;
 imagesc(z);
 
 z=uint8(z);
-imwrite(z,'./cross.png');
+imwrite(z,'./ycross.png');
 
-
-
+z=150*ones(1080,1920);
+z=uint8(z);
+imwrite(z,'./z.png');
 %% 正弦分布
 m=1920;
 n=1080;
