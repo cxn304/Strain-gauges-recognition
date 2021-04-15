@@ -1,4 +1,5 @@
 clear
+close all
 %%
 %参数设置
 imgDir='./moire_img/';    %总文件夹
@@ -23,6 +24,7 @@ for iii = 1:len
     lshizi=imread([nowdir,lfile{9}]); %  左图十字
     lwu = imread([nowdir,lfile{10}]); %  左图无十字
     %     [clx,cly,pixelsize] = find_cross_point(lshizi,uint8(mean(avepics,3)));
+    figure
     imshow(lshizi)
     [clx,cly] = ginput(1);
     clx = int32(clx);
@@ -30,53 +32,66 @@ for iii = 1:len
     rshizi=imread([nowdir,rfile{9}]);
     rwu = imread([nowdir,rfile{10}]);
     %     [crx,cry,~] = find_cross_point(rshizi,rwu);
+    figure
     imshow(rshizi)
     [crx,cry] = ginput(1);
     crx = int32(crx);
     cry = int32(cry);
     [height,width] = size(lshizi);
     [maskl,maskr] = find_intersection_area(clx,cly,crx,cry,height,width);
-    
-    zhouqi=zeros(1,4);
     avepics = zeros(height,width,4);
+    zhouqi=zeros(1,4);
     for i=1:4  % 循环的是{'L\heng\','L\shu\','R\heng\','R\shu\'}
         [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
-            ,maskl,clx,cly,crx,cry);
+            ,maskl,maskr,clx,cly,crx,cry);
         [phi,im_mag]=fourstepbasedphase(avepics,4); % phi与原图维度一致
-        thing_mask = find_specie(phi,height,width);
-        % phi是解出来的相位
-        clear avepics
-        % save([imgDir,obj,'\',namewrap{i},'.asc'],'phi','-ASCII');
-        [deri,~]=derical(phi,thing_mask,zp);
         figure
+        subplot(2,2,1)
+        imagesc(phi)
+        text(.5,.5,{'phi'},...
+            'FontSize',14,'HorizontalAlignment','center')
+        if i == 1 || i == 3
+            thing_mask = find_specie(phi);
+        end
+        subplot(2,2,2)
+        imagesc(thing_mask)
+        text(.5,.5,{'thing_mask'},...
+            'FontSize',14,'HorizontalAlignment','center')
+        % phi是解出来的相位
+        [deri,~]=derical(phi,thing_mask,zp);
+        subplot(2,2,3)
         imagesc(deri)
+        text(.5,.5,{'deri'},...
+            'FontSize',14,'HorizontalAlignment','center')
         % imagesc(A) 将矩阵A中的元素数值按大小转化为不同颜色，
         % 并在坐标轴对应位置处以这种颜色染色
-        unwrap=goodscan(deri,thing_mask,phi,sss,width);
+        unwrap=goodscan(deri,thing_mask,phi,i,clx,cly,crx,cry);
         A=~isnan(unwrap);
         % A=~isnan((0./fix(deri)+1).*mask);
         se=strel('diamond',1);
-        A=(imdilate(A,se)-A).*im_mask;
+        A=(imdilate(A,se)-A).*thing_mask;
         l=find(A(:)==1);
         adjoin=nan(length(l)*5,1);
         adjoin(1:length(l),1)=l;
-        clear l
-        phi=im_mask.*phi;
-        unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
-        zhouqi(i)=unwrap(zp(1),zp(2))/pi;
-        unwrap=unwrap-round(zhouqi(i))*pi;%横竖有关
-        figure(i)
-        imagesc(unwrap);
-        clear unwrap
+        %         phi=thing_mask.*phi;
+        %         unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
+        %         zhouqi(i)=unwrap(zp(1),zp(2))/pi;
+        %         unwrap=unwrap-round(zhouqi(i))*pi;%横竖有关
+        subplot(2,2,4)
+        imagesc(unwrap)
+        text(.5,.5,{'unwrap'},...
+            'FontSize',14,'HorizontalAlignment','center')
+        save(['unwrap' num2str(i)], 'unwrap');
     end
 end
 %%
-function img = find_specie(phi,height,width)
+function img = find_specie(phi)
 % 找出物体位置
-b=ones(height,width);
+b=ones(size(phi));
 b(phi==0)=0;
 se1=strel('disk',2);
 b=imopen(b,se1);
+se1=strel('disk',5);
 b=imclose(b,se1);
 imLabel = bwlabel(b);                %对各连通域进行标记
 stats = regionprops(imLabel,'Area');    %求各连通域的大小
@@ -99,7 +114,7 @@ end
 end
 %%
 function [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
-    ,maskl,clx,cly,crx,cry)
+    ,maskl,maskr,clx,cly,crx,cry)
 % 创建平均图像并返回十字中心坐标和计算区域掩膜
 if i<=2  % 前2步相移
     avepics(:,:,1) = imread([nowdir,allfile{4*(i-1)+1}]);
@@ -263,7 +278,7 @@ else
                     phase_ref(3) = IM_unwrapped(r_active, c_active+1)+IM_phase(r_active, c_active)-IM_phase(r_active, c_active+1)...
                         -2*pi*round((IM_phase(r_active, c_active)-IM_phase(r_active, c_active+1))/2/pi);
                     qualityneighbor(3)=derivative_variance(r_active, c_active+1);
-
+                    
                 else % unwrapped_binary(r_active, c_active+1)==0
                     if(~isnan(IM_phase(r_active, c_active+1))*adjoinmap(r_active, c_active+1)==1)
                         k=k+1;
@@ -279,7 +294,7 @@ else
                     phase_ref(4) = IM_unwrapped(r_active, c_active-1)+IM_phase(r_active, c_active)-IM_phase(r_active, c_active-1)...
                         -2*pi*round((IM_phase(r_active, c_active)-IM_phase(r_active, c_active-1))/2/pi);
                     qualityneighbor(4)=derivative_variance(r_active, c_active-1);
-
+                    
                 else % unwrapped_binary(r_active, c_active-1)==0
                     if(~isnan(IM_phase(r_active, c_active-1))*adjoinmap(r_active, c_active-1)==1)
                         k=k+1;
@@ -292,7 +307,7 @@ else
             [IM_max,m] = max(qualityneighbor);
             %     idx_max = find((IM_magv >= 0.99*IM_max) & (idx_del==1));
             IM_unwrapped(r_active, c_active) =phase_ref(m);  % Use the first, if there is a tie
-
+            
         end % while sum(sum(adjoin(2:r_dim-1,2:c_dim-1))) ~= 0  %Loop until there are no more adjoining pixels
     else
         
@@ -358,9 +373,9 @@ else
                     end
                 end
             end
-
+            
             IM_unwrapped(r_active, c_active) =phase_ref;
-
+            
         end % while sum(sum(adjoin(2:r_dim-1,2:c_dim-1))) ~= 0  %Loop until there are no more adjoining pixels
     end
     return
@@ -374,6 +389,7 @@ function [A,Aorigin]=derical(phi,im_mask,zp)
 row=size(phi,1);   % row
 col=size(phi,2);   % col
 A=zeros(row,col);
+
 du=phi(3:size(phi,1),2:size(phi,2)-1)-phi(2:size(phi,1)-1,2:size(phi,2)-1);
 du=du-2*pi*round(du/2/pi);
 
@@ -491,23 +507,28 @@ end
 cd(oldPwd);
 end
 %%
-function unwrap=goodscan(deri,mask,phi,sss,width)
+function unwrap=goodscan(deri,mask,phi,i,clx,cly,crx,cry)
 % maxline=20;
 dimx=size(phi,1);   % row
 dimy=size(phi,2);   % col
 % linumber=dimx*3;
 mask=(0./fix(deri)+1).*mask;
+mask(mask==0)=nan;
 % [r,rowref ]=max(sum(mask,2));
 phi=mask.*phi;%phi; area of quality==1
 C=~isnan(phi);%对非计算域进行膨胀操作，找出连通路径A4=imdilate(A3,se)
-cloumnref = width-5;
+if i<=2
+    cloumnref = clx;
+else
+    cloumnref = crx;
+end
 cc=C(:,cloumnref);
 k=find(cc==1);
-rowref=k(fix(numel(k)/2));
+rowref=k(fix(numel(k)/2));  % fix Round towards zero.numel返回数组中元素个数
 colref=cloumnref;
 edl=cloumnref+2;
 unwrap=nan(dimx,dimy);
-unwrap(rowref,colref)=phi(rowref, colref);
+unwrap(rowref,colref)=phi(rowref, colref);  % ?????
 adjoin=nan(dimx*(edl-cloumnref+1),2);
 k=0;
 if ~isnan(phi(rowref, colref+1))==1&&colref+1<=edl
@@ -558,7 +579,7 @@ if direction==-1%downwards
     while k~=0 %Loop until there are no more adjoining pixels
         r_active=adjoin(k);
         adjoin(k)=NaN;
-        k=k-1;  
+        k=k-1;
         %Then search above
         if(r_active-1>=1)  % Is this a valid index?
             if ~isnan(IM_unwrapped(r_active-1))
@@ -600,4 +621,3 @@ elseif direction==1%'upwards'
 end
 return
 end
-
