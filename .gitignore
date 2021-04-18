@@ -43,6 +43,7 @@ MANIFEST
 *.spec
 *.pptx
 *.asv
+*.7z
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
