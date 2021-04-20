@@ -44,13 +44,7 @@ class CxnUnwrapCrossEntropy(nn.Module):
         self.smoothing = smoothing
         self.confidence = 1. - smoothing
 
-    def _compute_losses(self, x, target):
-        log_prob = F.log_softmax(x, dim=-1)
-        nll_loss = -log_prob.gather(dim=-1, index=target.unsqueeze(1))
-        nll_loss = nll_loss.squeeze(1)
-        smooth_loss = -log_prob.mean(dim=-1)
-        loss = self.confidence * nll_loss + self.smoothing * smooth_loss
-        return loss
-
     def forward(self, x, target):
-        return self._compute_losses(x, target).mean()
+        t = torch.abs(x-target)
+        loss = torch.mean(t)
+        return loss
