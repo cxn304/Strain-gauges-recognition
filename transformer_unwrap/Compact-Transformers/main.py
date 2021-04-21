@@ -31,7 +31,7 @@ class Args_cxn():
         self.data = 'DIR'
         self.print_freq = 1
         self.checkpoint_path = 'checkpoint.pth'
-        self.epochs = 10
+        self.epochs = 100
         self.warmup = 5
         self.batch_size = 32
         self.lr = 0.0005

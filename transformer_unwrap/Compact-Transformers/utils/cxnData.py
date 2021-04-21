@@ -84,7 +84,7 @@ def generate_img():
         image_t3 = np.random.randint(2,10)*X*np.exp(-X**2-Y**2)
         image_t4=np.random.randint(2,10)*Y*np.sin(X)-np.random.randint(2,10)*X*np.cos(Y)
         image_t5=np.random.randint(2,10)*(1-X)**2*np.exp(-(X**2)-(Y+1)**2)- np.random.randint(2,10)*(X/5 - X**3 - Y**5)*np.exp(-X**2-Y**2)- 1/3*np.exp(-(X+1)**2 - Y**2)
-        for noise_variance in np.arange(0,0.4,0.05):
+        for noise_variance in np.arange(0,0.4,0.02):
             image_noise = image_t+noise_variance*np.random.randn(N,N)
             image_t_wrapped = np.arctan2(np.sin(image_noise), np.cos(image_noise))
             

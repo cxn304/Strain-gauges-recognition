@@ -57,7 +57,7 @@ class Conv2dFinal(nn.Sequential):
             padding=padding,
             bias=not (use_batchnorm),
         )
-        super(Conv2dReLU, self).__init__(conv)
+        super(Conv2dFinal, self).__init__(conv)
         
         
 class CxnTokenizer(nn.Module):
@@ -359,9 +359,9 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
             use_batchnorm=False,)
         self.conv_up_48_4 = Conv2dReLU(32,4,kernel_size=3,padding=1,stride=1,
             use_batchnorm=False,)
-        self.conv_up_12_1 = Conv2dReLU(8,1,kernel_size=3,padding=1,stride=1,
+        self.conv_up_12_1 = Conv2dReLU(8,4,kernel_size=3,padding=1,stride=1,
             use_batchnorm=False,)
-        self.final_output = Conv2dFinal(1,1,kernel_size=3,padding=1,stride=1,)
+        self.final_output = Conv2dFinal(4,1,kernel_size=3,padding=1,stride=1,)
         self.fc1 = nn.Linear(256*256*32,12)
         self.fc2 = nn.Linear(12,1)
         self.apply(self.init_weight)
