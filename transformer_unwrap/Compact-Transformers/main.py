@@ -5,13 +5,14 @@ from time import time
 import math
 import shutil
 import pdb
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-
+import matplotlib.pyplot as plt
 from src import cct as cct_models
 from utils.losses import LabelSmoothingCrossEntropy,CxnUnwrapCrossEntropy
 from utils.cxnData import cxnDataset
@@ -95,9 +96,9 @@ class Args_cxn():
     def __init__(self):
         self.workers = 2
         self.data = 'DIR'
-        self.print_freq = 10
+        self.print_freq = 1
         self.checkpoint_path = 'checkpoint.pth'
-        self.epochs = 2
+        self.epochs = 10
         self.warmup = 5
         self.batch_size = 32
         self.lr = 0.0005
@@ -114,6 +115,18 @@ class Args_cxn():
         self.no_cuda = False
         
 
+def plot_3d_wrap(image_t):
+    image_t = image_t[0,0,:,:]
+    image_t = image_t.detach().numpy()
+    N = 512
+    X = np.arange(-3,3,6/N)
+    Y = np.arange(-3,3,6/N)
+    X,Y=np.meshgrid(X,Y)
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    surf = ax.plot_surface(X, Y, image_t, rstride=1, cstride=1, antialiased=True)
+    plt.show()
+    
 
 def adjust_learning_rate(optimizer, epoch, args):
     lr = args.lr
@@ -142,20 +155,21 @@ def accuracy(output, target):
 
 def cls_train(train_loader, model, criterion, optimizer, epoch, args):
     model.train()   # 开启模型的训练模式
-    loss_val, acc1_val = 0, 0
+    loss_val = 0
     n = 0
     for i, (images, target) in enumerate(train_loader):
         if (not args.no_cuda) and torch.cuda.is_available():
             images = images.cuda(args.gpu_id, non_blocking=True)
             target = target.cuda(args.gpu_id, non_blocking=True)
         output = model(images)  # [n,1,512,512]
+        plot_3d_wrap(output)
         target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
         loss = criterion(output, target)
 
-        acc1 = accuracy(output, target)
+        # acc1 = accuracy(output, target)
         n += images.size(0)
         loss_val += float(loss.item() * images.size(0))
-        acc1_val += float(acc1[0] * images.size(0))
+        # acc1_val += float(acc1[0] * images.size(0))
 
         optimizer.zero_grad()   # 首先要清空优化器的梯度,只算这次怎么优化
         loss.backward()         # 反向传播
@@ -166,13 +180,13 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         optimizer.step()        # 梯度做进一步参数更新
 
         if args.print_freq >= 0 and i % args.print_freq == 0:
-            avg_loss, avg_acc1 = (loss_val / n), (acc1_val / n)
-            print(f'[Epoch {epoch+1}][Train][{i}] \t Loss: {avg_loss:.4e} \t Top-1 {avg_acc1:6.2f}')
+            avg_loss = (loss_val / n)
+            print(f'[Epoch {epoch+1}][Train][{i}] \t Loss: {avg_loss:.4e}')
 
 
 def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None):
     model.eval()    # 开启模型的测试模式,此模式不dropout
-    loss_val, acc1_val = 0, 0
+    loss_val = 0
     n = 0
     with torch.no_grad():
         for i, (images, target) in enumerate(val_loader):
@@ -183,20 +197,20 @@ def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None
             output = model(images)
             loss = criterion(output, target)
 
-            acc1 = accuracy(output, target)
+            # acc1 = accuracy(output, target)
             n += images.size(0)
             loss_val += float(loss.item() * images.size(0))
-            acc1_val += float(acc1[0] * images.size(0))
+            # acc1_val += float(acc1[0] * images.size(0))
 
             if args.print_freq >= 0 and i % args.print_freq == 0:
-                avg_loss, avg_acc1 = (loss_val / n), (acc1_val / n)
-                print(f'[Epoch {epoch+1}][Eval][{i}] \t Loss: {avg_loss:.4e} \t Top-1 {avg_acc1:6.2f}')
+                avg_loss = (loss_val / n)
+                print(f'[Epoch {epoch+1}][Eval][{i}] \t Loss: {avg_loss:.4e}')
 
-    avg_loss, avg_acc1 = (loss_val / n), (acc1_val / n)
+    avg_loss = (loss_val / n)
     total_mins = -1 if time_begin is None else (time() - time_begin) / 60
-    print(f'[Epoch {epoch+1}] \t \t Top-1 {avg_acc1:6.2f} \t \t Time: {total_mins:.2f}')
+    print(f'[Epoch {epoch+1}] \t \t  Time: {total_mins:.2f}')
 
-    return avg_acc1
+    return avg_loss
 
 
 if __name__ == '__main__':
@@ -210,7 +224,7 @@ if __name__ == '__main__':
                                         kernel_size=args.conv_size,
                                         patch_size=args.patch_size)
 
-    criterion = CxnUnwrapCrossEntropy()    # 这里也是要改的
+    criterion = nn.MSELoss()    # 这里也是要改的,用原来的就可以
     
 
     if (not args.no_cuda) and torch.cuda.is_available():
@@ -265,11 +279,13 @@ if __name__ == '__main__':
     for epoch in range(args.epochs):
         adjust_learning_rate(optimizer, epoch, args)
         cls_train(train_loader, model, criterion, optimizer, epoch, args)
-        acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, time_begin=time_begin)
+        acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
+                            time_begin=time_begin)
         best_acc1 = max(acc1, best_acc1)
+        torch.save(model.state_dict(), args.checkpoint_path)  # 每个epoch都要存
 
     total_mins = (time() - time_begin) / 60
     print(f'Script finished in {total_mins:.2f} minutes, '
           f'best top-1: {best_acc1:.2f}, '
           f'final top-1: {acc1:.2f}')
-    torch.save(model.state_dict(), args.checkpoint_path)
+    

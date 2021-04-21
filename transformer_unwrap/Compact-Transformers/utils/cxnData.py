@@ -5,23 +5,33 @@ import numpy as np
 
 
 def generate_img():
+    if not os.path.exists('./trainx'):
+      os.makedirs('./trainx')
+    if not os.path.exists('./trainy'):
+      os.makedirs('./trainy')  
+    if not os.path.exists('./valx'):
+      os.makedirs('./valx')
+    if not os.path.exists('./valy'):
+      os.makedirs('./valy')
     N = 512
     X = np.arange(-3,3,6/N)
     Y = np.arange(-3,3,6/N)
     X,Y=np.meshgrid(X,Y)
-    for i in range(10): # 每种模式进行10次计算
+    for i in range(10): # 每种模式进行10次计算,
       t=time.time()
       file_first_name = str(t*1000000)
-      image_t = 20*np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1);
-      #fig = plt.figure()
-      #ax = fig.gca(projection='3d')
-      #surf = ax.plot_surface(X, Y, image_t, rstride=1, cstride=1, antialiased=True)
-      #plt.show()
-      for noise_variance in np.arange(0,0.4,0.05):
+      image_t = 20*np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
+      image_val = X * np.exp(-X**2-X**2) + X*np.random.rand(1) + Y*np.random.rand(1)
+
+      for noise_variance in np.arange(0,0.4,0.01):
         image_noise = image_t+noise_variance*np.random.randn(N,N)
+        image_val_noise = image_val+noise_variance*np.random.randn(N,N)
         imagen_wrapped = np.arctan2(np.sin(image_noise), np.cos(image_noise))
+        image_val_wrapped = np.arctan2(np.sin(image_val_noise), np.cos(image_val_noise))
         np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(imagen_wrapped))
         np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_t))
+        np.save('./valx/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_val_wrapped))
+        np.save('./valy/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_val))
 
 
 class cxnDataset(Dataset):
@@ -73,10 +83,9 @@ class cxnDataset(Dataset):
         return len(self.image_files)
     
 
-
-cxn = cxnDataset('./trainx/','./trainy/')
-train_loader = torch.utils.data.DataLoader(
-      cxn, batch_size=32, shuffle=True,
-      num_workers=2)
+# cxn = cxnDataset('./trainx/','./trainy/')
+# train_loader = torch.utils.data.DataLoader(
+#       cxn, batch_size=32, shuffle=True,
+#       num_workers=2)
 
 

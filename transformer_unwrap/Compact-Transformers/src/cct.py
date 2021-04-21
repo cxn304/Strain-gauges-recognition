@@ -10,7 +10,7 @@ __all__ = ['cct_2', 'cct_4', 'cct_6', 'cct_7', 'cct_8',
            ]
 
 
-        
+# more output      
 class Conv2dReLU(nn.Sequential):
     def __init__(
             self,
@@ -52,16 +52,16 @@ class CxnTokenizer(nn.Module):
         super(CxnTokenizer, self).__init__()
         
         self.img_size = img_size
-        self.conv1 = Conv2dReLU(3,4,kernel_size=3,padding=1,stride=stride,
+        self.conv1 = Conv2dReLU(3,4,kernel_size=3,padding=1,
             use_batchnorm=use_batchnorm,
         )
-        self.conv2 = Conv2dReLU(4,16,kernel_size=3,padding=1,stride=stride,
+        self.conv2 = Conv2dReLU(4,16,kernel_size=3,padding=1,
             use_batchnorm=use_batchnorm,
         )  # 把一个conv block集成了起来,加上了MaxPool2d,2倍的降采样
-        self.conv3 = Conv2dReLU(16,64,kernel_size=3,padding=1,stride=stride,
+        self.conv3 = Conv2dReLU(16,64,kernel_size=3,padding=1,
             use_batchnorm=use_batchnorm,
         )
-        self.conv4 = Conv2dReLU(64,256,kernel_size=3,padding=1,stride=stride,
+        self.conv4 = Conv2dReLU(64,256,kernel_size=3,padding=1,
             use_batchnorm=use_batchnorm,
         )
         self.flattener = nn.Flatten(2, 3) # 把第2维和第3维压平
@@ -77,7 +77,7 @@ class CxnTokenizer(nn.Module):
         用在我的模型中,这里也要改,我的模型为[1,3,512,512],这里要变为[256,32,32]
         '''
         output_feature=[]
-        b = x[:,0,:,:]
+        b = x[:,0,:,:].unsqueeze(1)
         b0 = b.reshape([-1,4,int(self.img_size/2),int(self.img_size/2)])
         b1 = b.reshape([-1,16,int(self.img_size/4),int(self.img_size/4)])
         b2 = b.reshape([-1,64,int(self.img_size/8),int(self.img_size/8)])
@@ -86,7 +86,7 @@ class CxnTokenizer(nn.Module):
         output_feature.append(b1)
         output_feature.append(b2)
         output_feature.append(b3)
-        x = self.conv1(x)  # [n,32,256,256]
+        x = self.conv1(x)  # [n,4,256,256]
         output_feature.append(x)
         x = self.conv2(x)  # [n,64,128,128]
         output_feature.append(x)
@@ -151,7 +151,7 @@ class CXNTransformerUnet(nn.Module):
             else:
                 self.positional_emb = nn.Parameter(
                     self.sinusoidal_embedding(sequence_length, embedding_dim),
-                                                   requires_grad=False)
+                                                   requires_grad=False) # sin
         else:
             self.positional_emb = None
 
