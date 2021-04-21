@@ -4,7 +4,7 @@ import argparse
 from time import time
 import math
 import shutil
-
+import pdb
 import torch
 import torch.nn as nn
 import torch.optim
@@ -13,12 +13,13 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
 from src import cct as cct_models
-from utils.losses import LabelSmoothingCrossEntropy
+from utils.losses import LabelSmoothingCrossEntropy,CxnUnwrapCrossEntropy
+from utils.cxnData import cxnDataset
 
 model_names = sorted(name for name in cct_models.__dict__
                      if name.islower() and not name.startswith("_")
                      and callable(cct_models.__dict__[name]))
-
+global best_acc1
 best_acc1 = 0
 
 
@@ -92,18 +93,18 @@ def init_parser():
 class Args_cxn():
     # VGG_MEAN = [103.939, 116.779, 123.68]
     def __init__(self):
-        self.workers = 4
+        self.workers = 2
         self.data = 'DIR'
         self.print_freq = 10
         self.checkpoint_path = 'checkpoint.pth'
         self.epochs = 2
         self.warmup = 5
-        self.batch_size = 128
+        self.batch_size = 32
         self.lr = 0.0005
         self.weight_decay = 3e-2
         self.clip_grad_norm = 10
         self.model = 'cct_2'
-        self.positional_embedding = 'learnable'
+        self.positional_embedding = 'learnable' # choices=['learnable', 'sine', 'none']
         self.conv_layers = 2
         self.conv_size = 3
         self.patch_size = 4
@@ -147,8 +148,8 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         if (not args.no_cuda) and torch.cuda.is_available():
             images = images.cuda(args.gpu_id, non_blocking=True)
             target = target.cuda(args.gpu_id, non_blocking=True)
-        output = model(images)
-
+        output = model(images)  # [n,1,512,512]
+        target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
         loss = criterion(output, target)
 
         acc1 = accuracy(output, target)
@@ -199,33 +200,30 @@ def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None
 
 
 if __name__ == '__main__':
-    global best_acc1
-
-    # parser = init_parser()
     args = Args_cxn()
-    img_size = 32
-    num_classes = 10
+    img_size = 512
     img_mean, img_std = [0.4914, 0.4822, 0.4465], [0.2470, 0.2435, 0.2616]
 
-    model = cct_models.__dict__['cct_2'](img_size=img_size,
-                                            num_classes=num_classes,
-                                            positional_embedding='learnable',
-                                            n_conv_layers=2,
-                                            kernel_size=3,
-                                            patch_size=4)
+    model = cct_models.__dict__[args.model](img_size=img_size,
+                                        positional_embedding=args.positional_embedding,
+                                        n_conv_layers=args.conv_layers,
+                                        kernel_size=args.conv_size,
+                                        patch_size=args.patch_size)
 
-    criterion = LabelSmoothingCrossEntropy()
+    criterion = CxnUnwrapCrossEntropy()    # 这里也是要改的
+    
 
-    if (not False) and torch.cuda.is_available():
-        torch.cuda.set_device(0)
-        model.cuda(0)
-        criterion = criterion.cuda(0)
+    if (not args.no_cuda) and torch.cuda.is_available():
+          torch.cuda.set_device(args.gpu_id)
+          model.cuda(args.gpu_id)
+          criterion = criterion.cuda(args.gpu_id)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0005,
-                                  weight_decay=3e-2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
+                                  weight_decay=args.weight_decay)
 
     normalize = [transforms.Normalize(mean=img_mean, std=img_std)]
 
+    '''
     augmentations = []
     if not False:
         from utils.autoaug import CIFAR10Policy
@@ -240,7 +238,7 @@ if __name__ == '__main__':
 
     augmentations = transforms.Compose(augmentations)
     train_dataset = datasets.CIFAR10(root=args.data, train=True, download=True,
-                                     transform=augmentations)
+                                      transform=augmentations)
 
     val_dataset = datasets.CIFAR10(
         root=args.data, train=False, download=False, transform=transforms.Compose([
@@ -248,11 +246,15 @@ if __name__ == '__main__':
             transforms.ToTensor(),
             *normalize,
         ]))
+    '''
+    
+    train_dataset = cxnDataset('./trainx/','./trainy/')
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers)
 
+    val_dataset = cxnDataset('./valx/','./valy/')
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=args.batch_size, shuffle=False,

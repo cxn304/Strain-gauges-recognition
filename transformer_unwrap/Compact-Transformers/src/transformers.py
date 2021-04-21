@@ -100,10 +100,11 @@ class TransformerEncoderLayer(Module):
         # identity模块不改变输入,直接return input
         self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0 else Identity()
 
-        self.activation = F.gelu
+        self.activation = F.gelu # 激活函数
 
     def forward(self, src: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         src = src + self.drop_path(self.self_attn(self.pre_norm(src)))
+        # 这种函数套函数格式很方便,相当于直接对里层函数的输出值进行动作
         src = self.norm1(src)
         src2 = self.linear2(self.dropout1(self.activation(self.linear1(src))))
         src = src + self.drop_path(self.dropout2(src2))

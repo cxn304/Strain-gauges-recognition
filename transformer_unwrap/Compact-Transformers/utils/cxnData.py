@@ -64,6 +64,7 @@ class cxnDataset(Dataset):
     def to_tensor(self,img):
         # unsqueeze(0)在第一维上增加一个维度
         img = torch.from_numpy(img.astype(np.float32)).unsqueeze(0)
+        img = img.repeat(3,1,1)
         return img
         
 
@@ -75,7 +76,7 @@ class cxnDataset(Dataset):
 
 cxn = cxnDataset('./trainx/','./trainy/')
 train_loader = torch.utils.data.DataLoader(
-      cxn, batch_size=16, shuffle=True,
+      cxn, batch_size=32, shuffle=True,
       num_workers=2)
 
 
