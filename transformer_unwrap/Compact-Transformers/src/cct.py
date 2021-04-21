@@ -36,6 +36,30 @@ class Conv2dReLU(nn.Sequential):
         super(Conv2dReLU, self).__init__(conv, bn, relu)
         
         
+class Conv2dFinal(nn.Sequential):
+    '''
+    最后一层不加relu,因为要预测负值
+    '''
+    def __init__(
+            self,
+            in_channels,
+            out_channels,
+            kernel_size,
+            padding=1,
+            stride=2,
+            use_batchnorm=True,
+    ):
+        conv = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride=stride,
+            padding=padding,
+            bias=not (use_batchnorm),
+        )
+        super(Conv2dReLU, self).__init__(conv)
+        
+        
 class CxnTokenizer(nn.Module):
     def __init__(self,
                  img_size,
@@ -337,6 +361,7 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
             use_batchnorm=False,)
         self.conv_up_12_1 = Conv2dReLU(8,1,kernel_size=3,padding=1,stride=1,
             use_batchnorm=False,)
+        self.final_output = Conv2dFinal(1,1,kernel_size=3,padding=1,stride=1,)
         self.fc1 = nn.Linear(256*256*32,12)
         self.fc2 = nn.Linear(12,1)
         self.apply(self.init_weight)
@@ -369,22 +394,27 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
         else:
             x = x[:, 0]
         
-        x = x.reshape([-1,256,16,16])
-        x = torch.cat((features[-1], x), dim=1)
+        x = x.reshape([-1,256,16,16])   # 这一步时max和min都对
+        # x = torch.cat((features[-1], x), dim=1)
+        x = torch.cat((features[3], x), dim=1)
         x = self.upsampling(x) # [64,64]
-        x = self.conv_up_768_64(x)
+        x = self.conv_up_768_64(x)      # 经过这里后就全变成零了!!!!!!
         
-        x = torch.cat((features[-2], x), dim=1)  
+        # x = torch.cat((features[-2], x), dim=1)  
+        x = torch.cat((features[2], x), dim=1)
         x = self.upsampling(x) # [128,128]
         x = self.conv_up_192_16(x)
         
-        x = torch.cat((features[-3], x), dim=1) # 把原图拼接进去
+        # x = torch.cat((features[-3], x), dim=1) # 把原图拼接进去
+        x = torch.cat((features[1], x), dim=1)
         x = self.upsampling(x) # [256,256]
         x = self.conv_up_48_4(x)
         
-        x = torch.cat((features[-4], x), dim=1) # [n,64,256,256]
+        # x = torch.cat((features[-4], x), dim=1) # [n,64,256,256]
+        x = torch.cat((features[0], x), dim=1)
         x = self.upsampling(x)
         x = self.conv_up_12_1(x)
+        x = self.final_output(x)
         # xx = self.fc1(x.flatten())
         # xx = self.fc2(xx)
         return x
