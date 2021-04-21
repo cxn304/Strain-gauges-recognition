@@ -115,16 +115,45 @@ class Args_cxn():
         self.no_cuda = False
         
 
-def plot_3d_wrap(image_t):
+def plot_3d_wrap(image_t,image_true,image_wrap):
+    image_wrap=image_wrap[0,0,:,:]
+    image_wrap = image_wrap.detach().numpy()
+    image_true=image_true[0,0,:,:]
+    image_true = image_true.detach().numpy()
     image_t = image_t[0,0,:,:]
     image_t = image_t.detach().numpy()
-    N = 512
+    N = 256
     X = np.arange(-3,3,6/N)
     Y = np.arange(-3,3,6/N)
     X,Y=np.meshgrid(X,Y)
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    surf = ax.plot_surface(X, Y, image_t, rstride=1, cstride=1, antialiased=True)
+    plt.subplot(211)
+    ax.plot_surface(X, Y, image_t, rstride=1, cstride=1, antialiased=True)
+    plt.subplot(222)
+    ax.plot_surface(X, Y, image_true, rstride=1, cstride=1, antialiased=True)
+    plt.subplot(221)
+    ax.plot_surface(X, Y, image_wrap, rstride=1, cstride=1, antialiased=True)
+    plt.show()
+    
+    
+def imagesc(image_t,image_true,image_wrap):
+    image_wrap=image_wrap[0,0,:,:]
+    image_wrap = image_wrap.detach().numpy()
+    image_true=image_true[0,0,:,:]
+    image_true = image_true.detach().numpy()
+    image_t = image_t[0,0,:,:]
+    image_t = image_t.detach().numpy()
+    plt.axis('on')
+    plt.subplot(131)
+    plt.imshow(image_t)
+    plt.colorbar(shrink=0.4)
+    plt.subplot(132)
+    plt.imshow(image_true)
+    plt.colorbar(shrink=0.4)
+    plt.subplot(133)
+    plt.imshow(image_wrap)
+    plt.colorbar(shrink=0.4)
     plt.show()
     
 
@@ -139,19 +168,6 @@ def adjust_learning_rate(optimizer, epoch, args):
         param_group['lr'] = lr
 
 
-def accuracy(output, target):
-    with torch.no_grad():
-        batch_size = target.size(0)
-
-        _, pred = output.topk(1, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        res = []
-        correct_k = correct[:1].flatten().float().sum(0, keepdim=True)
-        res.append(correct_k.mul_(100.0 / batch_size))
-        return res
-
 
 def cls_train(train_loader, model, criterion, optimizer, epoch, args):
     model.train()   # 开启模型的训练模式
@@ -161,8 +177,7 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         if (not args.no_cuda) and torch.cuda.is_available():
             images = images.cuda(args.gpu_id, non_blocking=True)
             target = target.cuda(args.gpu_id, non_blocking=True)
-        output = model(images)  # [n,1,512,512]
-        plot_3d_wrap(output)
+        output = model(images)
         target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
         loss = criterion(output, target)
 
@@ -181,11 +196,12 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
 
         if args.print_freq >= 0 and i % args.print_freq == 0:
             avg_loss = (loss_val / n)
-            print(f'[Epoch {epoch+1}][Train][{i}] \t Loss: {avg_loss:.4e}')
+            print(f'[Epoch {epoch+1}][Train][{i}] \t Loss: {avg_loss:.4e} ')
+    imagesc(output,target,images)
 
 
 def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None):
-    model.eval()    # 开启模型的测试模式,此模式不dropout
+    model.eval()    # 开启模型的测试模式,此模式不dropout也不backwards
     loss_val = 0
     n = 0
     with torch.no_grad():
@@ -195,8 +211,8 @@ def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None
                 target = target.cuda(args.gpu_id, non_blocking=True)
 
             output = model(images)
+            target = target[:,0,:,:].unsqueeze(1)
             loss = criterion(output, target)
-
             # acc1 = accuracy(output, target)
             n += images.size(0)
             loss_val += float(loss.item() * images.size(0))
@@ -215,7 +231,7 @@ def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None
 
 if __name__ == '__main__':
     args = Args_cxn()
-    img_size = 512
+    img_size = 256
     img_mean, img_std = [0.4914, 0.4822, 0.4465], [0.2470, 0.2435, 0.2616]
 
     model = cct_models.__dict__[args.model](img_size=img_size,
@@ -281,7 +297,7 @@ if __name__ == '__main__':
         cls_train(train_loader, model, criterion, optimizer, epoch, args)
         acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
                             time_begin=time_begin)
-        best_acc1 = max(acc1, best_acc1)
+        best_acc1 = min(acc1, best_acc1)
         torch.save(model.state_dict(), args.checkpoint_path)  # 每个epoch都要存
 
     total_mins = (time() - time_begin) / 60
