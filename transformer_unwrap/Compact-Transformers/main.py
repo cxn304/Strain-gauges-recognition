@@ -24,73 +24,6 @@ global best_acc1
 best_acc1 = 0
 
 
-def init_parser():
-    parser = argparse.ArgumentParser(description='CIFAR10 quick training script')
-
-    # Data args
-    parser.add_argument('data', metavar='DIR',
-                        help='path to dataset') 
-    # metavar它为帮助消息中的可选参数提供了不同的名称
-
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
-
-    parser.add_argument('--print-freq', default=10, type=int, metavar='N',
-                        help='log frequency (by iteration)')
-
-    parser.add_argument('--checkpoint-path',
-                        type=str,
-                        default='checkpoint.pth',
-                        help='path to checkpoint (default: checkpoint.pth)')
-
-    # Optimization hyperparams
-    parser.add_argument('--epochs', default=5, type=int, metavar='N',
-                        help='number of total epochs to run')
-    parser.add_argument('--warmup', default=5, type=int, metavar='N',
-                        help='number of warmup epochs')
-    parser.add_argument('-b', '--batch-size', default=128, type=int,
-                        metavar='N',
-                        help='mini-batch size (default: 128)', dest='batch_size')
-    parser.add_argument('--lr', default=0.0005, type=float,
-                        help='initial learning rate')
-    parser.add_argument('--weight-decay', default=3e-2, type=float,
-                        help='weight decay (default: 1e-4)')
-    parser.add_argument('--clip-grad-norm', default=0., type=float,
-                        help='gradient norm clipping (default: 0 (disabled))')
-
-    parser.add_argument('-m', '--model',
-                        type=str.lower,
-                        choices=model_names,
-                        default='cct_2', dest='model')
-
-    parser.add_argument('-p', '--positional-embedding',
-                        type=str.lower,
-                        choices=['learnable', 'sine', 'none'],
-                        default='learnable', dest='positional_embedding')
-
-    parser.add_argument('--conv-layers', default=2, type=int,
-                        help='number of convolutional layers (cct only)')
-
-    parser.add_argument('--conv-size', default=3, type=int,
-                        help='convolution kernel size (cct only)')
-
-    parser.add_argument('--patch-size', default=4, type=int,
-                        help='image patch size (vit and cvt only)')
-
-    parser.add_argument('--disable-cos', action='store_true',
-                        help='disable cosine lr schedule')
-
-    parser.add_argument('--disable-aug', action='store_true',
-                        help='disable augmentation policies for training')
-
-    parser.add_argument('--gpu-id', default=0, type=int)
-
-    parser.add_argument('--no-cuda', action='store_true',
-                        help='disable cuda')    # 只要运行时该变量有传参就将该变量设为True
-
-    return parser
-
-
 class Args_cxn():
     # VGG_MEAN = [103.939, 116.779, 123.68]
     def __init__(self):
@@ -137,24 +70,25 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     plt.show()
     
     
-def imagesc(image_t,image_true,image_wrap):
-    image_wrap=image_wrap[0,0,:,:]
-    image_wrap = image_wrap.detach().numpy()
-    image_true=image_true[0,0,:,:]
-    image_true = image_true.detach().numpy()
-    image_t = image_t[0,0,:,:]
-    image_t = image_t.detach().numpy()
-    plt.axis('on')
-    plt.subplot(131)
-    plt.imshow(image_t)
-    plt.colorbar(shrink=0.4)
-    plt.subplot(132)
-    plt.imshow(image_true)
-    plt.colorbar(shrink=0.4)
-    plt.subplot(133)
-    plt.imshow(image_wrap)
-    plt.colorbar(shrink=0.4)
-    plt.show()
+def imagesc(image_t1,image_true1,image_wrap1):
+    for i in range(0,32,4):
+        image_wrap=image_wrap1[i,0,:,:]
+        image_wrap = image_wrap.detach().numpy()
+        image_true=image_true1[i,0,:,:]
+        image_true = image_true.detach().numpy()
+        image_t = image_t1[i,0,:,:]
+        image_t = image_t.detach().numpy()
+        plt.axis('on')
+        plt.subplot(131)
+        plt.imshow(image_t)
+        plt.colorbar(shrink=0.4)
+        plt.subplot(132)
+        plt.imshow(image_true)
+        plt.colorbar(shrink=0.4)
+        plt.subplot(133)
+        plt.imshow(image_wrap)
+        plt.colorbar(shrink=0.4)
+        plt.show()
     
 
 def adjust_learning_rate(optimizer, epoch, args):
@@ -180,7 +114,7 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         output = model(images)
         target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
         loss = criterion(output, target)
-
+        
         # acc1 = accuracy(output, target)
         n += images.size(0)
         loss_val += float(loss.item() * images.size(0))

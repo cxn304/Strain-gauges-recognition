@@ -2,6 +2,64 @@ import torch,os,random,time
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import numpy as np
+import matplotlib.pyplot as plt
+
+
+def test_generate_img():
+    N = 256
+    X = np.arange(-3,3,6/N)
+    Y = np.arange(-3,3,6/N)
+    X,Y=np.meshgrid(X,Y)
+    image_t = 20*np.exp(-0.1*(X**2 + Y**2)) + X*np.random.rand(1) + Y*np.random.rand(1)
+    imagen_wrappedt = np.arctan2(np.sin(image_t), np.cos(image_t))
+    
+    image_val = X * np.exp(-X**2-X**2) + X*np.random.rand(1) + Y*np.random.rand(1)
+    imagen_wrapped = np.arctan2(np.sin(image_val), np.cos(image_val))
+    
+    image_t2 = np.random.randint(2,10)*(1-X/2+X**5+Y**3)*np.random.randint(2,10)*np.exp(-X ** 2 - Y ** 2)
+    imagen_wrappe_t2 = np.arctan2(np.sin(image_t2), np.cos(image_t2))
+    
+    image_t3 = np.random.randint(2,10)*np.sin(X)+np.random.randint(2,10)*np.cos(Y)
+    imagen_wrappe_t3 = np.arctan2(np.sin(image_t3), np.cos(image_t3))
+    
+    image_t4=np.random.randint(2,10)*Y*np.sin(X)-np.random.randint(2,10)*X*np.cos(Y)
+    imagen_wrappe_t4 = np.arctan2(np.sin(image_t4), np.cos(image_t4))
+    
+    plt.figure(figsize=(8, 6))
+    plt.subplot(441)
+    plt.imshow(image_val)
+    plt.colorbar(shrink=0.6)
+    plt.subplot(442)
+    plt.imshow(imagen_wrapped)
+    plt.colorbar(shrink=0.6)
+    
+    plt.subplot(443)
+    plt.imshow(image_t)
+    plt.colorbar(shrink=0.6)
+    plt.subplot(444)
+    plt.imshow(imagen_wrappedt)
+    plt.colorbar(shrink=0.6)
+    
+    plt.subplot(445)
+    plt.imshow(image_t2)
+    plt.colorbar(shrink=0.6)
+    plt.subplot(446)
+    plt.imshow(imagen_wrappe_t2)
+    plt.colorbar(shrink=0.6)
+    
+    plt.subplot(447)
+    plt.imshow(image_t3)
+    plt.colorbar(shrink=0.6)
+    plt.subplot(448)
+    plt.imshow(imagen_wrappe_t3)
+    plt.colorbar(shrink=0.6)
+    
+    plt.subplot(449)
+    plt.imshow(image_t4)
+    plt.colorbar(shrink=0.6)
+    plt.subplot(4,4,10)
+    plt.imshow(imagen_wrappe_t4)
+    plt.colorbar(shrink=0.6)
 
 
 def generate_img():
@@ -18,25 +76,70 @@ def generate_img():
     Y = np.arange(-3,3,6/N)
     X,Y=np.meshgrid(X,Y)
     for i in range(10): # 每种模式进行10次计算
-      t=time.time()
-      file_first_name = str(t*1000000)
-      image_t = 20*np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
-      image_val = X * np.exp(-X**2-X**2) + X*np.random.rand(1) + Y*np.random.rand(1)
-      #fig = plt.figure()
-      #ax = fig.gca(projection='3d')
-      #surf = ax.plot_surface(X, Y, image_t, rstride=1, cstride=1, antialiased=True)
-      #plt.show()
-      for noise_variance in np.arange(0,0.4,0.01):
-        image_noise = image_t+noise_variance*np.random.randn(N,N)
-        image_val_noise = image_val+noise_variance*np.random.randn(N,N)
-        imagen_wrapped = np.arctan2(np.sin(image_noise), np.cos(image_noise))
-        image_val_wrapped = np.arctan2(np.sin(image_val_noise), np.cos(image_val_noise))
-        np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(imagen_wrapped))
-        np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_t))
-        np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'z.npy',np.float32(image_val_wrapped))
-        np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'z.npy',np.float32(image_val))
-        np.save('./valx/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_val_wrapped))
-        np.save('./valy/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_val))
+        t=time.time()
+        file_first_name = str(t*1000000)
+        image_t = np.random.randint(5,20)**np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
+        image_t1 = np.random.randint(2,10)*X * np.exp(-X**2-X**2) + np.random.randint(2,10)*X*np.random.rand(1) + Y*np.random.rand(1)
+        image_t2 = np.random.randint(2,10)*(1-X/2+X**5+Y**3)*np.random.randint(2,10)*np.exp(-X ** 2 - Y ** 2)
+        image_t3 = np.random.randint(2,10)*X*np.exp(-X**2-Y**2)
+        image_t4=np.random.randint(2,10)*Y*np.sin(X)-np.random.randint(2,10)*X*np.cos(Y)
+        image_t5=np.random.randint(2,10)*(1-X)**2*np.exp(-(X**2)-(Y+1)**2)- np.random.randint(2,10)*(X/5 - X**3 - Y**5)*np.exp(-X**2-Y**2)- 1/3*np.exp(-(X+1)**2 - Y**2)
+        for noise_variance in np.arange(0,0.4,0.05):
+            image_noise = image_t+noise_variance*np.random.randn(N,N)
+            image_t_wrapped = np.arctan2(np.sin(image_noise), np.cos(image_noise))
+            
+            image_t1_noise = image_t1+noise_variance*np.random.randn(N,N)
+            image_t1_wrapped = np.arctan2(np.sin(image_t1_noise), 
+                                          np.cos(image_t1_noise))
+            
+            image_t2_noise = image_t2+noise_variance*np.random.randn(N,N)
+            image_t2_wrapped = np.arctan2(np.sin(image_t2_noise), 
+                                          np.cos(image_t2_noise))
+            
+            image_t3_noise = image_t3+noise_variance*np.random.randn(N,N)
+            image_t3_wrapped = np.arctan2(np.sin(image_t3_noise), 
+                                          np.cos(image_t3_noise))
+            
+            image_t4_noise = image_t4+noise_variance*np.random.randn(N,N)
+            image_t4_wrapped = np.arctan2(np.sin(image_t4_noise), 
+                                          np.cos(image_t4_noise))
+            
+            image_t5_noise = image_t5+noise_variance*np.random.randn(N,N)
+            image_t5_wrapped = np.arctan2(np.sin(image_t5_noise), 
+                                          np.cos(image_t5_noise))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'.npy',np.float32(image_t_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'.npy',np.float32(image_t))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t1.npy',np.float32(image_t1_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t1.npy',np.float32(image_t1))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t2.npy',np.float32(image_t2_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t2.npy',np.float32(image_t2))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t3.npy',np.float32(image_t3_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t3.npy',np.float32(image_t3))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t4.npy',np.float32(image_t4_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t4.npy',np.float32(image_t4))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t5.npy',np.float32(image_t5_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t5.npy',np.float32(image_t5))
+            
+            np.save('./valx/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_t1_wrapped))
+            np.save('./valy/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_t1))
 
 
 class cxnDataset(Dataset):
@@ -87,7 +190,7 @@ class cxnDataset(Dataset):
         # 返回图像的数量
         return len(self.image_files)
     
-
+# generate_img()
 # cxn = cxnDataset('./trainx/','./trainy/')
 # train_loader = torch.utils.data.DataLoader(
 #       cxn, batch_size=32, shuffle=True,
