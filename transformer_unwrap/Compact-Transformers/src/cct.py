@@ -272,7 +272,8 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
                 use_batchnorm=False,)
             self.conv_up_12_1 = Conv2dReLUNoPooling(8,4,kernel_size=3,padding=1,
                 use_batchnorm=False,)
-            self.final_output = Conv2dFinal(4,1,kernel_size=7,padding=3,)
+            self.final_output_0 = Conv2dFinal(4,4,kernel_size=7,padding=3,)
+            self.final_output_1 = Conv2dFinal(4,1,kernel_size=7,padding=3,)
         else:
             self.upsampling = nn.UpsamplingBilinear2d(scale_factor=2)
             self.conv_up_768_64 = Conv2dReLUNoPooling(768,64,kernel_size=3,padding=1,
@@ -283,7 +284,8 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
                 use_batchnorm=False,)
             self.conv_up_12_1 = Conv2dReLUNoPooling(12,8,kernel_size=3,padding=1,
                 use_batchnorm=False,)
-            self.final_output = Conv2dFinal(8,1,kernel_size=7,padding=3,)
+            self.final_output_0 = Conv2dFinal(8,8,kernel_size=7,padding=3,)
+            self.final_output_1 = Conv2dFinal(8,1,kernel_size=7,padding=3,)
         
         self.fc1 = nn.Linear(256*256*32,12)
         self.fc2 = nn.Linear(12,1)
@@ -341,7 +343,8 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
         x = torch.cat((features[0], x), dim=1)
         x = self.upsampling(x)
         x = self.conv_up_12_1(x)
-        x = self.final_output(x)
+        x = self.final_output_0(x)
+        x = self.final_output_1(x)
         # xx = self.fc1(x.flatten())
         # xx = self.fc2(xx)
         return x

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import argparse
 from time import time
 import math
 import shutil
@@ -30,7 +29,7 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 1
-        self.checkpoint_path = 'checkpoint.pth'
+        self.checkpoint_path='./drive/MyDrive/transformer_unwrap/checkpoint.pth'
         self.epochs = 100
         self.warmup = 5
         self.batch_size = 32
@@ -72,25 +71,37 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     
     
 def imagesc(image_t1,image_true1,image_wrap1):
+    plt.figure(figsize=(10, 8))
+    plt.subplots_adjust(wspace =.5, hspace =.5) # 调整子图间距
+    plt.axis('on')
+    predict = []
+    trues = []
+    inputs = []
     for i in range(0,32,4):
         image_wrap=image_wrap1[i,0,:,:]
         image_wrap = image_wrap.detach().numpy()
+        inputs.append(image_wrap)
         image_true=image_true1[i,0,:,:]
         image_true = image_true.detach().numpy()
+        trues.append(image_true)
         image_t = image_t1[i,0,:,:]
         image_t = image_t.detach().numpy()
-        plt.subplots_adjust(wspace =.2, hspace =.2) # 调整子图间距
-        plt.axis('on')
-        plt.subplot(131)
-        plt.imshow(image_t)
-        plt.colorbar(shrink=0.4)
-        plt.subplot(132)
-        plt.imshow(image_true)
-        plt.colorbar(shrink=0.4)
-        plt.subplot(133)
-        plt.imshow(image_wrap)
-        plt.colorbar(shrink=0.4)
-        plt.show()
+        predict.append(image_t)
+    
+    for i in range(len(trues)):
+        ax = plt.subplot(8,3,3*i+1)
+        plt.imshow(predict[i])
+        plt.colorbar(shrink=0.6)
+        ax.set_title('unwrap Mat predict')
+        ax = plt.subplot(8,3,3*i+2)
+        plt.imshow(trues[i])
+        plt.colorbar(shrink=0.6)
+        ax.set_title('unwrap Mat true')
+        ax = plt.subplot(8,3,3*i+3)
+        plt.imshow(inputs[i])
+        plt.colorbar(shrink=0.6)
+        ax.set_title('wraped Mat input')
+    plt.show()
     
 
 def adjust_learning_rate(optimizer, epoch, args):
@@ -133,7 +144,11 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         if args.print_freq >= 0 and i % args.print_freq == 0:
             avg_loss = (loss_val / n)
             print(f'[Epoch {epoch+1}][Train][{i}] \t Loss: {avg_loss:.4e} ')
-    imagesc(output,target,images)
+        
+        if i == len(train_loader)-2:
+            ioutput,itarget,iimages=output,target,images
+    imagesc(ioutput,itarget,iimages)
+    return avg_loss
 
 
 def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None):
@@ -191,11 +206,12 @@ if __name__ == '__main__':
 
     if RESUME:
         # 断点路径
-        path_checkpoint = "./drive/MyDrive/transformer_unwrap/checkpoint.pth"  
-        model.load_state_dict(torch.load(path_checkpoint))
-    
-        optimizer.load_state_dict(path_checkpoint['optimizer'])  # 加载优化器参数
-        start_epoch = path_checkpoint['epoch']  # 设置开始的epoch
+        path_checkpoint = "./drive/MyDrive/transformer_unwrap/checkpoint.pth"
+        checkpoint = torch.load(path_checkpoint)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = checkpoint['epoch']
+        loss = checkpoint['loss']
     else:
         start_epoch = 0
         
@@ -217,11 +233,16 @@ if __name__ == '__main__':
     time_begin = time()
     for epoch in range(start_epoch,args.epochs):
         adjust_learning_rate(optimizer, epoch, args)
-        cls_train(train_loader, model, criterion, optimizer, epoch, args)
+        avg_loss = cls_train(train_loader, model, criterion, optimizer, epoch, args)
         acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
                             time_begin=time_begin)
         best_acc1 = min(acc1, best_acc1)
-        torch.save(model.state_dict(), args.checkpoint_path)  # 每个epoch都要存
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': avg_loss,
+            }, args.checkpoint_path)
 
     total_mins = (time() - time_begin) / 60
     print(f'Script finished in {total_mins:.2f} minutes, '

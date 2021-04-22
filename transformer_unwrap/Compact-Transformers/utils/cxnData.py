@@ -6,72 +6,57 @@ import matplotlib.pyplot as plt
 
 
 def test_generate_img():
-  N = 256
-  X = np.arange(-3,3,6/N)
-  Y = np.arange(-3,3,6/N)
-  X,Y=np.meshgrid(X,Y)
-  image_t = random.randint(5,15)*np.exp(-0.1*(X**2 + Y**2)) + X*np.random.rand(1) + Y*np.random.rand(1)
-  imagen_wrappedt = np.arctan2(np.sin(image_t), np.cos(image_t))
+    N = 256
+    X = np.arange(-3,3,6/N)
+    Y = np.arange(-3,3,6/N)
+    X,Y=np.meshgrid(X,Y)
+    
+    unwraped = []
+    wrapped = []
+    
+    image_t = random.randint(5,15)*np.exp(-0.1*(X**2 + Y**2)) + X*np.random.rand(1) + Y*np.random.rand(1)
+    imagen_wrappedt = np.arctan2(np.sin(image_t), np.cos(image_t))
+    unwraped.append(image_t)
+    wrapped.append(imagen_wrappedt)
+    
+    image_val = random.randint(5,15)*X * np.exp(-X**2-X**2) + X*np.random.rand(1) + Y*np.random.rand(1)
+    imagen_wrapped = np.arctan2(np.sin(image_val), np.cos(image_val))
+    unwraped.append(image_val)
+    wrapped.append(imagen_wrapped)
+    
+    image_t2 = random.randint(5,15)*(1-X/2+X**5+Y**3)*random.randint(5,15)*np.exp(-X ** 2 - Y ** 2)
+    imagen_wrappe_t2 = np.arctan2(np.sin(image_t2), np.cos(image_t2))
+    unwraped.append(image_t2)
+    wrapped.append(imagen_wrappe_t2)
+    
+    image_t3 = random.randint(5,15)*np.sin(X)+random.randint(5,15)*np.cos(Y)
+    imagen_wrappe_t3 = np.arctan2(np.sin(image_t3), np.cos(image_t3))
+    unwraped.append(image_t3)
+    wrapped.append(imagen_wrappe_t3)
+    
+    image_t4=random.randint(5,15)*Y*np.sin(X)-random.randint(5,15)*X*np.cos(Y)
+    imagen_wrappe_t4 = np.arctan2(np.sin(image_t4), np.cos(image_t4))
+    unwraped.append(image_t4)
+    wrapped.append(imagen_wrappe_t4)
+    
+    image_t5=random.randint(5,15)*(1-X)**2*np.exp(-(X**2)-(Y+1)**2)- random.randint(5,15)*(X/5 - X**3 - Y**5)*np.exp(-X**2-Y**2)- 1/3*np.exp(-(X+1)**2 - Y**2)
+    imagen_wrappe_t5 = np.arctan2(np.sin(image_t5), np.cos(image_t5))  
+    unwraped.append(image_t5)
+    wrapped.append(imagen_wrappe_t5)
+    
+    plt.figure(figsize=(10, 8))
+    plt.subplots_adjust(wspace =.5, hspace =.5) # 调整子图间距
+  
+    for i in range(len(wrapped)):
+        ax = plt.subplot(4,4,2*i+1)
+        plt.imshow(unwraped[i])
+        plt.colorbar(shrink=0.9)
+        ax.set_title('unwrap Mat')
+        ax = plt.subplot(4,4,2*i+2)
+        plt.imshow(wrapped[i])
+        plt.colorbar(shrink=0.9)
+        ax.set_title('wrapped Mat')
 
-  image_val = random.randint(5,15)*X * np.exp(-X**2-X**2) + X*np.random.rand(1) + Y*np.random.rand(1)
-  imagen_wrapped = np.arctan2(np.sin(image_val), np.cos(image_val))
-
-  image_t2 = random.randint(5,15)*(1-X/2+X**5+Y**3)*random.randint(5,15)*np.exp(-X ** 2 - Y ** 2)
-  imagen_wrappe_t2 = np.arctan2(np.sin(image_t2), np.cos(image_t2))
-
-  image_t3 = random.randint(5,15)*np.sin(X)+random.randint(5,15)*np.cos(Y)
-  imagen_wrappe_t3 = np.arctan2(np.sin(image_t3), np.cos(image_t3))
-
-  image_t4=random.randint(5,15)*Y*np.sin(X)-random.randint(5,15)*X*np.cos(Y)
-  imagen_wrappe_t4 = np.arctan2(np.sin(image_t4), np.cos(image_t4))
-
-  image_t5=random.randint(5,15)*(1-X)**2*np.exp(-(X**2)-(Y+1)**2)- random.randint(5,15)*(X/5 - X**3 - Y**5)*np.exp(-X**2-Y**2)- 1/3*np.exp(-(X+1)**2 - Y**2)
-  imagen_wrappe_t5 = np.arctan2(np.sin(image_t5), np.cos(image_t5))      
-
-  plt.figure(figsize=(10, 8))
-  plt.subplots_adjust(wspace =.5, hspace =.5) # 调整子图间距
-
-  plt.subplot(441)
-  plt.imshow(image_val)
-  plt.colorbar(shrink=0.9)
-  plt.subplot(442)
-  plt.imshow(imagen_wrapped)
-  plt.colorbar(shrink=0.9)
-
-  plt.subplot(443)
-  plt.imshow(image_t)
-  plt.colorbar(shrink=0.9)
-  plt.subplot(444)
-  plt.imshow(imagen_wrappedt)
-  plt.colorbar(shrink=0.9)
-
-  plt.subplot(445)
-  plt.imshow(image_t2)
-  plt.colorbar(shrink=0.9)
-  plt.subplot(446)
-  plt.imshow(imagen_wrappe_t2)
-  plt.colorbar(shrink=0.9)
-
-  plt.subplot(447)
-  plt.imshow(image_t3)
-  plt.colorbar(shrink=0.9)
-  plt.subplot(448)
-  plt.imshow(imagen_wrappe_t3)
-  plt.colorbar(shrink=0.9)
-
-  plt.subplot(449)
-  plt.imshow(image_t4)
-  plt.colorbar(shrink=0.9)
-  plt.subplot(4,4,10)
-  plt.imshow(imagen_wrappe_t4)
-  plt.colorbar(shrink=0.9)
-
-  plt.subplot(4,4,11)
-  plt.imshow(image_t5)
-  plt.colorbar(shrink=0.9)
-  plt.subplot(4,4,12)
-  plt.imshow(imagen_wrappe_t5)
-  plt.colorbar(shrink=0.9)
 
 
 def generate_img():
