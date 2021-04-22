@@ -46,6 +46,7 @@ class Args_cxn():
         self.disable_aug = False
         self.gpu_id = 0
         self.no_cuda = False
+        self.add_all_features = True
         
 
 def plot_3d_wrap(image_t,image_true,image_wrap):
@@ -78,6 +79,7 @@ def imagesc(image_t1,image_true1,image_wrap1):
         image_true = image_true.detach().numpy()
         image_t = image_t1[i,0,:,:]
         image_t = image_t.detach().numpy()
+        plt.subplots_adjust(wspace =.2, hspace =.2) # 调整子图间距
         plt.axis('on')
         plt.subplot(131)
         plt.imshow(image_t)
@@ -164,6 +166,7 @@ def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None
 
 
 if __name__ == '__main__':
+    RESUME = False
     args = Args_cxn()
     img_size = 256
     img_mean, img_std = [0.4914, 0.4822, 0.4465], [0.2470, 0.2435, 0.2616]
@@ -172,7 +175,8 @@ if __name__ == '__main__':
                                         positional_embedding=args.positional_embedding,
                                         n_conv_layers=args.conv_layers,
                                         kernel_size=args.conv_size,
-                                        patch_size=args.patch_size)
+                                        patch_size=args.patch_size,
+                                        add_all_features=args.add_all_features)
 
     criterion = nn.MSELoss()    # 这里也是要改的,用原来的就可以
     
@@ -185,32 +189,17 @@ if __name__ == '__main__':
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
                                   weight_decay=args.weight_decay)
 
+    if RESUME:
+        # 断点路径
+        path_checkpoint = "./drive/MyDrive/transformer_unwrap/checkpoint.pth"  
+        model.load_state_dict(torch.load(path_checkpoint))
+    
+        optimizer.load_state_dict(path_checkpoint['optimizer'])  # 加载优化器参数
+        start_epoch = path_checkpoint['epoch']  # 设置开始的epoch
+    else:
+        start_epoch = 0
+        
     normalize = [transforms.Normalize(mean=img_mean, std=img_std)]
-
-    '''
-    augmentations = []
-    if not False:
-        from utils.autoaug import CIFAR10Policy
-        augmentations += [
-            CIFAR10Policy()
-        ]
-    augmentations += [
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        *normalize,
-    ]
-
-    augmentations = transforms.Compose(augmentations)
-    train_dataset = datasets.CIFAR10(root=args.data, train=True, download=True,
-                                      transform=augmentations)
-
-    val_dataset = datasets.CIFAR10(
-        root=args.data, train=False, download=False, transform=transforms.Compose([
-            transforms.Resize(img_size),
-            transforms.ToTensor(),
-            *normalize,
-        ]))
-    '''
     
     train_dataset = cxnDataset('./trainx/','./trainy/')
 
@@ -226,7 +215,7 @@ if __name__ == '__main__':
 
     print("Beginning training")
     time_begin = time()
-    for epoch in range(args.epochs):
+    for epoch in range(start_epoch,args.epochs):
         adjust_learning_rate(optimizer, epoch, args)
         cls_train(train_loader, model, criterion, optimizer, epoch, args)
         acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
