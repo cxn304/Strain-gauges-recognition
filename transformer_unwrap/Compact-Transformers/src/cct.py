@@ -343,7 +343,7 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
         x = torch.cat((features[0], x), dim=1)
         x = self.upsampling(x)
         x = self.conv_up_12_1(x)
-        x = self.final_output_0(x)
+        x = self.final_output_0(x)  # 如果要继续训练,注释这个就好了
         x = self.final_output_1(x)
         # xx = self.fc1(x.flatten())
         # xx = self.fc2(xx)
