@@ -143,13 +143,16 @@ class CxnTokenizer(nn.Module):
         self.conv1 = Conv2dReLU(3,4,kernel_size=3,padding=1,
             use_batchnorm=use_batchnorm,
         )
-        self.conv2 = Conv2dReLU(4,16,kernel_size=3,padding=1,
+        self.conv2 = Conv2dReLU(8,16,kernel_size=3,padding=1,
             use_batchnorm=use_batchnorm,
         )  # 把一个conv block集成了起来,加上了MaxPool2d,2倍的降采样
-        self.conv3 = Conv2dReLU(16,64,kernel_size=3,padding=1,
+        self.conv3 = Conv2dReLU(32,64,kernel_size=3,padding=1,
             use_batchnorm=use_batchnorm,
         )
-        self.conv4 = Conv2dReLU(64,256,kernel_size=3,padding=1,
+        self.conv4 = Conv2dReLU(128,256,kernel_size=3,padding=1,
+            use_batchnorm=use_batchnorm,
+        )
+        self.conv5 = Conv2dReLUNoPooling(512,256,kernel_size=3,padding=1,
             use_batchnorm=use_batchnorm,
         )
         self.flattener = nn.Flatten(2, 3) # 把第2维和第3维压平
@@ -174,14 +177,24 @@ class CxnTokenizer(nn.Module):
         output_feature.append(b1)
         output_feature.append(b2)
         output_feature.append(b3)
+        
         x = self.conv1(x)  # [n,4,256,256]
         output_feature.append(x)
+        x = torch.cat((output_feature[0], x), dim=1)
+        
         x = self.conv2(x)  # [n,64,128,128]
         output_feature.append(x)
+        x = torch.cat((output_feature[1], x), dim=1)
+        
         x = self.conv3(x)  # [n,128,64,64]
         output_feature.append(x)
+        x = torch.cat((output_feature[2], x), dim=1)
+        
         x = self.conv4(x)  # [n,256,16,16] 保证这个与b一致
         output_feature.append(x)
+        x = torch.cat((output_feature[3], x), dim=1)       
+        x = self.conv5(x)
+        
         # 可以return两个值
         output = self.flattener(x.transpose(-2, -1))
         return output,output_feature
@@ -321,29 +334,29 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
         
         x = x.reshape([-1,256,16,16])   # 这一步时max和min都对
         if self.add_all_features:
-            x = torch.cat((features[-1], x), dim=1)
-        x = torch.cat((features[3], x), dim=1)
+            x = torch.cat((features[3], x), dim=1)
+        x = torch.cat((features[-1], x), dim=1)
         x = self.upsampling(x) # [64,64]
         x = self.conv_up_768_64(x)
         
         if self.add_all_features:
-            x = torch.cat((features[-2], x), dim=1)  
-        x = torch.cat((features[2], x), dim=1)
+            x = torch.cat((features[2], x), dim=1)  
+        x = torch.cat((features[-2], x), dim=1)
         x = self.upsampling(x) # [128,128]
         x = self.conv_up_192_16(x)
         
         if self.add_all_features:
-            x = torch.cat((features[-3], x), dim=1) # 把原图拼接进去
-        x = torch.cat((features[1], x), dim=1)
+            x = torch.cat((features[1], x), dim=1) # 把原图拼接进去
+        x = torch.cat((features[-3], x), dim=1)
         x = self.upsampling(x) # [256,256]
         x = self.conv_up_48_4(x)
         
         if self.add_all_features:
-            x = torch.cat((features[-4], x), dim=1) # [n,64,256,256]
-        x = torch.cat((features[0], x), dim=1)
+            x = torch.cat((features[0], x), dim=1) # [n,64,256,256]
+        x = torch.cat((features[4], x), dim=1)
         x = self.upsampling(x)
         x = self.conv_up_12_1(x)
-        x = self.final_output_0(x)  # 如果要继续训练,注释这个就好了
+        x = self.final_output_0(x)
         x = self.final_output_1(x)
         # xx = self.fc1(x.flatten())
         # xx = self.fc2(xx)

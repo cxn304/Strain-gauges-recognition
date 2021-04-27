@@ -5,7 +5,7 @@ close all
 imgDir='./moire_img/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-for iii = 1:len
+for iii = 4:len
     nowdir = [imgDir usefolders{iii} '/'];
     files = dir([nowdir,'*.','png']);
     imglen = length(files);
@@ -23,7 +23,7 @@ for iii = 1:len
     
     lshizi=imread([nowdir,lfile{9}]); %  左图十字
     lwu = imread([nowdir,lfile{10}]); %  左图无十字
-    %     [clx,cly,pixelsize] = find_cross_point(lshizi,uint8(mean(avepics,3)));
+    [clx,cly,pixelsize] = find_cross_point(lshizi,lwu);
     figure
     imshow(lshizi)
     [clx,cly] = ginput(1);
@@ -81,7 +81,7 @@ for iii = 1:len
         imagesc(unwrap)
         text(.5,.5,{'unwrap'},...
             'FontSize',14,'HorizontalAlignment','center')
-        save(['unwrap' num2str(i)], 'unwrap');
+        %         save(['unwrap' num2str(i)], 'unwrap');
     end
 end
 %%
@@ -139,22 +139,41 @@ end
 %%
 function [xx,yy,pixelsize] = find_cross_point(lshizi,lwu)
 % 自动识别十字叉中心点坐标
-lwu(find(lwu>10)) = lwu(find(lwu>10))+7;    % 有待检验
-zuoshizitu = lwu-lshizi;
+% lwu(find(lwu>10)) = lwu(find(lwu>10))+7;    % 有待检验
+zuoshizitu = lwu-lshizi;    % 去除其余部分,只留下两个十字叉
+zuoshizitu=im2double(zuoshizitu);
+ymax=250;ymin=0;
+xmax = max(max(zuoshizitu));
+xmin = min(min(zuoshizitu));
+zuoshizitu = floor((ymax-ymin)*(zuoshizitu-xmin)/(xmax-xmin) + ymin); %归一化并取整
+zuoshizitu = uint8(zuoshizitu);
 pixelsize=size(lshizi);    %初始图像尺寸1024,1280
-zuoshizitu = imbinarize(zuoshizitu);
-[H,I,R]=hough(zuoshizitu);
-Peaks=houghpeaks(H,2);  % 就找两条最明显的直线
-lines=houghlines(zuoshizitu,I,R,Peaks);
-figure
-imshow(lwu-lshizi)
-hold on;
+zuoshizitub = imbinarize(zuoshizitu);
+[H,I,R]=hough(zuoshizitub);
+Peaks=houghpeaks(H,4,'Threshold',5);  % 就找两条最明显的直线
+lines=houghlines(zuoshizitub,I,R,Peaks);
+min_theta = 10;
+max_theta = 80;
+use_index = [];
 for k=1:length(lines)
-    xy=[lines(k).point1;lines(k).point2];
+    if min_theta>abs(lines(k).theta)
+        min_theta = abs(lines(k).theta);
+        use_index = [use_index,k];
+    end
+    if max_theta<abs(lines(k).theta)
+        max_theta = abs(lines(k).theta);
+        use_index = [use_index,k];
+    end
+end
+figure
+imshow(zuoshizitu)
+hold on;
+for k=1:2
+    xy=[lines(use_index(k)).point1;lines(use_index(k)).point2];
     plot(xy(:,1),xy(:,2),'LineWidth',1);
 end
-[xx,yy] = cal_node(lines(1).point1,lines(1).point2,...
-    lines(2).point1,lines(2).point2);
+[xx,yy] = cal_node(lines(use_index(1)).point1,lines(use_index(1)).point2,...
+    lines(use_index(2)).point1,lines(use_index(2)).point2);
 xx = round(xx);
 yy = round(yy);
 plot(xx,yy,'r*')

@@ -29,10 +29,10 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 1
-        self.checkpoint_path='./drive/MyDrive/transformer_unwrap/checkpoint.pth'
+        self.checkpoint_path="./drive/MyDrive/transformer_unwrap/contact_before.pth"
         self.epochs = 100
         self.warmup = 5
-        self.batch_size = 32
+        self.batch_size = 64
         self.lr = 0.0005
         self.weight_decay = 3e-2
         self.clip_grad_norm = 10
@@ -45,7 +45,7 @@ class Args_cxn():
         self.disable_aug = False
         self.gpu_id = 0
         self.no_cuda = False
-        self.add_all_features = True
+        self.add_all_features = False
         
 
 def plot_3d_wrap(image_t,image_true,image_wrap):
@@ -71,13 +71,13 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     
     
 def imagesc(image_t1,image_true1,image_wrap1):
-    plt.figure(figsize=(10, 8))
-    plt.subplots_adjust(wspace =.5, hspace =.5) # 调整子图间距
+    plt.figure(figsize=(7, 18))
+    plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
     plt.axis('on')
     predict = []
     trues = []
     inputs = []
-    for i in range(0,32,4):
+    for i in range(0,64,8):
         image_wrap=image_wrap1[i,0,:,:]
         image_wrap = image_wrap.detach().numpy()
         inputs.append(image_wrap)
@@ -181,7 +181,7 @@ def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None
 
 
 if __name__ == '__main__':
-    RESUME = False
+    RESUME = True
     args = Args_cxn()
     img_size = 256
     img_mean, img_std = [0.4914, 0.4822, 0.4465], [0.2470, 0.2435, 0.2616]
@@ -206,7 +206,7 @@ if __name__ == '__main__':
 
     if RESUME:
         # 断点路径
-        path_checkpoint = "./drive/MyDrive/transformer_unwrap/checkpoint.pth"
+        path_checkpoint = args.checkpoint_path
         checkpoint = torch.load(path_checkpoint)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])

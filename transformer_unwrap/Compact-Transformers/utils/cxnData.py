@@ -14,22 +14,22 @@ def test_generate_img():
     unwraped = []
     wrapped = []
     
-    image_t = random.randint(5,15)*np.exp(-0.1*(X**2 + Y**2)) + X*np.random.rand(1) + Y*np.random.rand(1)
+    image_t = random.randint(5,10)*np.exp(-0.1*(X**2 + Y**2)) + X*np.random.rand(1) + Y*np.random.rand(1)
     imagen_wrappedt = np.arctan2(np.sin(image_t), np.cos(image_t))
     unwraped.append(image_t)
     wrapped.append(imagen_wrappedt)
     
-    image_val = random.randint(5,15)*X * np.exp(-X**2-X**2) + X*np.random.rand(1) + Y*np.random.rand(1)
+    image_val = random.randint(5,10)*X * np.exp(-X**2-X**2) + X*np.random.rand(1) + Y*np.random.rand(1)
     imagen_wrapped = np.arctan2(np.sin(image_val), np.cos(image_val))
     unwraped.append(image_val)
     wrapped.append(imagen_wrapped)
     
-    image_t2 = random.randint(5,15)*(1-X/2+X**5+Y**3)*random.randint(5,15)*np.exp(-X ** 2 - Y ** 2)
+    image_t2 = random.randint(5,10)*(1-X/2+X**5+Y**3)*random.randint(5,10)*np.exp(-X ** 2 - Y ** 2)
     imagen_wrappe_t2 = np.arctan2(np.sin(image_t2), np.cos(image_t2))
     unwraped.append(image_t2)
     wrapped.append(imagen_wrappe_t2)
     
-    image_t3 = random.randint(5,15)*np.sin(X)+random.randint(5,15)*np.cos(Y)
+    image_t3 = random.randint(5,10)*np.sin(X)+random.randint(5,10)*np.cos(Y)
     imagen_wrappe_t3 = np.arctan2(np.sin(image_t3), np.cos(image_t3))
     unwraped.append(image_t3)
     wrapped.append(imagen_wrappe_t3)
@@ -75,12 +75,15 @@ def generate_img():
     for i in range(10): # 每种模式进行10次计算
         t=time.time()
         file_first_name = str(t*1000000)
-        image_t = random.randint(5,15)**np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
-        image_t1 = random.randint(5,15)*X * np.exp(-X**2-X**2) + random.randint(5,15)*X*np.random.rand(1) + Y*np.random.rand(1)
-        image_t2 = random.randint(5,15)*(1-X/2+X**5+Y**3)*random.randint(5,15)*np.exp(-X ** 2 - Y ** 2)
-        image_t3 = random.randint(5,15)*X*np.exp(-X**2-Y**2)
+        image_t = random.randint(5,10)**np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
+        image_t1 = random.randint(5,10)*X * np.exp(-X**2-X**2) + random.randint(5,15)*X*np.random.rand(1) + Y*np.random.rand(1)
+        image_t2 = random.randint(5,10)*(1-X/2+X**5+Y**3)*random.randint(5,10)*np.exp(-X ** 2 - Y ** 2)
+        image_t3 = random.randint(5,10)*X*np.exp(-X**2-Y**2)
         image_t4=random.randint(5,15)*Y*np.sin(X)-random.randint(5,15)*X*np.cos(Y)
         image_t5=random.randint(5,15)*(1-X)**2*np.exp(-(X**2)-(Y+1)**2)- random.randint(5,15)*(X/5 - X**3 - Y**5)*np.exp(-X**2-Y**2)- 1/3*np.exp(-(X+1)**2 - Y**2)
+        image_t6=random.randint(5,10)*X
+        image_t7=random.randint(5,10)*Y
+        image_t8=random.randint(5,10)*Y+random.randint(5,10)*X
         for noise_variance in np.arange(0,0.4,0.02):
             image_noise = image_t+noise_variance*np.random.randn(N,N)
             image_t_wrapped = np.arctan2(np.sin(image_noise), np.cos(image_noise))
@@ -104,6 +107,18 @@ def generate_img():
             image_t5_noise = image_t5+noise_variance*np.random.randn(N,N)
             image_t5_wrapped = np.arctan2(np.sin(image_t5_noise), 
                                           np.cos(image_t5_noise))
+            
+            image_t6_noise = image_t6+noise_variance*np.random.randn(N,N)
+            image_t6_wrapped = np.arctan2(np.sin(image_t6_noise), 
+                                          np.cos(image_t6_noise))
+            
+            image_t7_noise = image_t7+noise_variance*np.random.randn(N,N)
+            image_t7_wrapped = np.arctan2(np.sin(image_t7_noise), 
+                                          np.cos(image_t7_noise))
+            
+            image_t8_noise = image_t8+noise_variance*np.random.randn(N,N)
+            image_t8_wrapped = np.arctan2(np.sin(image_t8_noise), 
+                                          np.cos(image_t8_noise))
             
             np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
                 round(noise_variance,2))+'.npy',np.float32(image_t_wrapped))
@@ -134,6 +149,21 @@ def generate_img():
                 round(noise_variance,2))+'t5.npy',np.float32(image_t5_wrapped))
             np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
                 round(noise_variance,2))+'t5.npy',np.float32(image_t5))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t6.npy',np.float32(image_t6_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t6.npy',np.float32(image_t6))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t7.npy',np.float32(image_t7_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t7.npy',np.float32(image_t7))
+            
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t8.npy',np.float32(image_t8_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t8.npy',np.float32(image_t8))
             
             np.save('./valx/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_t1_wrapped))
             np.save('./valy/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_t1))
