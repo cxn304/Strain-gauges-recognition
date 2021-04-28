@@ -29,14 +29,15 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 5
-        self.checkpoint_path="./drive/MyDrive/transformer_unwrap/contact_before_cct8.pth"
-        self.epochs = 100
+        self.model = "cct_10"
+        self.checkpoint_path=\
+            "./drive/MyDrive/transformer_unwrap/contact_before_cct_10.pth"
+        self.epochs = 200
         self.warmup = 5
-        self.batch_size = 64
+        self.batch_size = 128
         self.lr = 0.0005
         self.weight_decay = 3e-2
         self.clip_grad_norm = 10
-        self.model = 'cct_8'
         self.positional_embedding = 'learnable' # choices=['learnable', 'sine', 'none']
         self.conv_layers = 2
         self.conv_size = 3
@@ -45,7 +46,8 @@ class Args_cxn():
         self.disable_aug = False
         self.gpu_id = 0
         self.no_cuda = False
-        self.add_all_features = False
+        self.add_all_features = True   # 是否在解码器中添加
+        self.RESUME = False
         
 
 def plot_3d_wrap(image_t,image_true,image_wrap):
@@ -190,8 +192,8 @@ def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None
 
 
 if __name__ == '__main__':
-    RESUME = True
     args = Args_cxn()
+    RESUME = args.RESUME
     img_size = 256
     img_mean, img_std = [0.4914, 0.4822, 0.4465], [0.2470, 0.2435, 0.2616]
 
@@ -216,7 +218,10 @@ if __name__ == '__main__':
     if RESUME:
         # 断点路径
         path_checkpoint = args.checkpoint_path
-        checkpoint = torch.load(path_checkpoint)
+        if torch.cuda.is_available():
+          checkpoint = torch.load(path_checkpoint)
+        else:
+          checkpoint = torch.load(path_checkpoint,map_location="cpu")
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch']

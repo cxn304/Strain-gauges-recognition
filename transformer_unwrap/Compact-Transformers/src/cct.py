@@ -132,7 +132,6 @@ class CxnTokenizer(nn.Module):
                  pooling_kernel_size=3,
                  pooling_stride=2, 
                  pooling_padding=1,
-                 n_conv_layers=1,
                  activation=None,
                  max_pool=True,
                  use_batchnorm=True):
@@ -159,7 +158,7 @@ class CxnTokenizer(nn.Module):
         self.apply(self.init_weight)  # apply用于初始化
 
     def sequence_length(self, n_channels=3, height=256, width=256):
-        a,b = self.forward(torch.zeros((1, n_channels, height, width)))
+        a,_ = self.forward(torch.zeros((1, n_channels, height, width)))
         return a.shape[1]
 
     def forward(self, x):
@@ -252,8 +251,10 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
                 self.positional_emb = nn.Parameter(
                     torch.zeros(1, sequence_length, embedding_dim),
                                                    requires_grad=True)
+                # 词的长度后接embedding维度
                 nn.init.trunc_normal_(self.positional_emb, std=0.2)
                 # 用从截断正态分布中提取的值填充输入张量
+                # embedding_dim决定了positional_emb的维度,他要和x一样
             else:
                 self.positional_emb = nn.Parameter(
                     self.sinusoidal_embedding(sequence_length, embedding_dim),
@@ -317,7 +318,7 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
             x = torch.cat((cls_token, x), dim=1)
 
         if self.positional_emb is not None:
-            x += self.positional_emb
+            x += self.positional_emb  # 是值的直接加,[128,256,256]+[1,256,256]
 
         x = self.dropout(x)
 
@@ -390,7 +391,6 @@ class CXNCCT(nn.Module):
     def __init__(self,img_size,add_all_features,
                  embedding_dim=256,
                  n_input_channels=3,
-                 n_conv_layers=1,
                  kernel_size=3,
                  stride=1,
                  padding=1,
@@ -410,8 +410,7 @@ class CXNCCT(nn.Module):
                                    pooling_stride=pooling_stride,
                                    pooling_padding=pooling_padding,
                                    max_pool=True,
-                                   activation=nn.ReLU,
-                                   n_conv_layers=n_conv_layers)
+                                   activation=nn.ReLU)
         
         self.wrapUnet = CXNTransformerUnetWithNoOrigin(
             add_all_features = add_all_features,
@@ -451,12 +450,12 @@ def _cxncct(num_layers, num_heads, mlp_ratio, embedding_dim,
 
 
 def cct_2(*args, **kwargs):   # 这里注意embedding_dim
-    return _cxncct(num_layers=8, num_heads=8, mlp_ratio=1, embedding_dim=256,
+    return _cxncct(num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=256,
                 *args, **kwargs)
 
 
 def cct_4(*args, **kwargs):
-    return _cxncct(num_layers=4, num_heads=2, mlp_ratio=1, embedding_dim=128,
+    return _cxncct(num_layers=4, num_heads=2, mlp_ratio=1, embedding_dim=256,
                 *args, **kwargs)
 
 
@@ -476,7 +475,7 @@ def cct_8(*args, **kwargs):
 
 
 def cct_10(*args, **kwargs):
-    return _cxncct(num_layers=10, num_heads=8, mlp_ratio=3, embedding_dim=512,
+    return _cxncct(num_layers=10, num_heads=8, mlp_ratio=3, embedding_dim=256,
                 *args, **kwargs)
 
 
