@@ -266,8 +266,10 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
             0, stochastic_depth_rate, num_layers)] # 0-0.1区间等分12份
         self.blocks = nn.ModuleList([
             TransformerEncoderLayer(d_model=embedding_dim, nhead=num_heads,
-                                    dim_feedforward=dim_feedforward, dropout=dropout_rate,
-                                    attention_dropout=attention_dropout, drop_path_rate=dpr[i])
+                                    dim_feedforward=dim_feedforward,
+                                    dropout=dropout_rate,
+                                    attention_dropout=attention_dropout, 
+                                    drop_path_rate=dpr[i])
             for i in range(num_layers)])
         # 把12个TransformerEncoderLayer编入subModule中,当作一个block
         self.norm = nn.LayerNorm(embedding_dim)
@@ -449,7 +451,7 @@ def _cxncct(num_layers, num_heads, mlp_ratio, embedding_dim,
 
 
 def cct_2(*args, **kwargs):   # 这里注意embedding_dim
-    return _cxncct(num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=256,
+    return _cxncct(num_layers=8, num_heads=8, mlp_ratio=1, embedding_dim=256,
                 *args, **kwargs)
 
 

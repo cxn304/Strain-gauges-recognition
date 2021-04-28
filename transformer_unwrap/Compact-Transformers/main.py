@@ -28,15 +28,15 @@ class Args_cxn():
     def __init__(self):
         self.workers = 2
         self.data = 'DIR'
-        self.print_freq = 1
-        self.checkpoint_path="./drive/MyDrive/transformer_unwrap/contact_before.pth"
+        self.print_freq = 5
+        self.checkpoint_path="./drive/MyDrive/transformer_unwrap/contact_before_cct8.pth"
         self.epochs = 100
         self.warmup = 5
         self.batch_size = 64
         self.lr = 0.0005
         self.weight_decay = 3e-2
         self.clip_grad_norm = 10
-        self.model = 'cct_2'
+        self.model = 'cct_8'
         self.positional_embedding = 'learnable' # choices=['learnable', 'sine', 'none']
         self.conv_layers = 2
         self.conv_size = 3
@@ -79,13 +79,22 @@ def imagesc(image_t1,image_true1,image_wrap1):
     inputs = []
     for i in range(0,64,8):
         image_wrap=image_wrap1[i,0,:,:]
-        image_wrap = image_wrap.detach().numpy()
+        if (not args.no_cuda) and torch.cuda.is_available():
+            image_wrap = image_wrap.detach().cpu().numpy()
+        else:
+            image_wrap = image_wrap.detach().numpy()
         inputs.append(image_wrap)
         image_true=image_true1[i,0,:,:]
-        image_true = image_true.detach().numpy()
+        if (not args.no_cuda) and torch.cuda.is_available():
+            image_true = image_true.detach().cpu().numpy()
+        else:
+            image_true = image_true.detach().numpy()
         trues.append(image_true)
         image_t = image_t1[i,0,:,:]
-        image_t = image_t.detach().numpy()
+        if (not args.no_cuda) and torch.cuda.is_available():
+            image_t = image_t.detach().cpu().numpy()
+        else:
+            image_t = image_t.detach().numpy()
         predict.append(image_t)
     
     for i in range(len(trues)):
