@@ -6,7 +6,8 @@ from .transformers import TransformerEncoderLayer
 
 
 __all__ = ['cct_2', 'cct_4', 'cct_6', 'cct_7', 'cct_8',
-           'cct_10', 'cct_12', 'cct_24', 'cct_32',
+           'cct_10', 'cct_12','cot_2', 'cot_4', 'cot_6', 'cot_7', 'cot_8',
+           'cot_10', 
            ]
 
 
@@ -121,6 +122,156 @@ class Conv2dTranpose(nn.Sequential):
             bias=not (bias),
         )
         super(Conv2dTranpose, self).__init__(conv)
+        
+        
+class OnlyTransformerToken(nn.Module):
+    '''
+    仅仅采用transformer的模型,看看效果如何
+    '''
+    def __init__(self,img_size,
+                 seq_pool=True,
+                 embedding_dim=256,
+                 num_layers=12,
+                 num_heads=12,
+                 mlp_ratio=4.0,
+                 dropout_rate=0.1,
+                 attention_dropout=0.1,
+                 stochastic_depth_rate=0.1,
+                 positional_embedding='sine',
+                 sequence_length=256,
+                 *args, **kwargs):
+        super(OnlyTransformerToken, self).__init__()
+        
+        self.img_size = img_size
+        positional_embedding = positional_embedding if \
+            positional_embedding in ['sine', 'learnable', 'none'] else 'sine'
+        dim_feedforward = int(embedding_dim * mlp_ratio)
+        self.embedding_dim = embedding_dim
+        self.sequence_length = sequence_length
+        self.seq_pool = seq_pool
+        
+        self.attention_pool = nn.Linear(self.embedding_dim, 256)
+        self.positional_emb = nn.Parameter(
+                    torch.zeros(1, sequence_length, embedding_dim),
+                                                   requires_grad=True)
+        # 词的长度后接embedding维度
+        nn.init.trunc_normal_(self.positional_emb, std=0.2)
+        
+        self.dropout = nn.Dropout(p=dropout_rate)
+        dpr = [x.item() for x in torch.linspace(
+            0, stochastic_depth_rate, num_layers)] # 0-0.1区间等分12份
+        self.blocks = nn.ModuleList([
+            TransformerEncoderLayer(d_model=embedding_dim, nhead=num_heads,
+                                    dim_feedforward=dim_feedforward,
+                                    dropout=dropout_rate,
+                                    attention_dropout=attention_dropout, 
+                                    drop_path_rate=dpr[i])
+            for i in range(num_layers)])
+        # 把12个TransformerEncoderLayer编入subModule中,当作一个block
+        self.norm = nn.LayerNorm(embedding_dim)
+        
+        self.conv1 = Conv2dReLUNoPooling(3,1,3)
+        self.conv_final = Conv2dFinal(1,1,3,1,1,False)
+        
+        self.apply(self.init_weight)
+        
+        
+    def forward(self,x):
+        if self.positional_emb is None and x.size(1) < self.sequence_length:
+            x = F.pad(x, (0, 0, 0, self.n_channels - x.size(1)), 
+                      mode='constant', value=0)
+
+        if not self.seq_pool:
+            cls_token = self.class_emb.expand(x.shape[0], -1, -1)
+            x = torch.cat((cls_token, x), dim=1)
+            
+        x = self.conv1(x)
+        # 这里要加上clone以免出现反向传播时的错误
+        x = x.clone().reshape(-1,self.sequence_length,self.sequence_length)
+        if self.positional_emb is not None:
+            x += self.positional_emb  # 是值的直接加,[128,256,256]+[1,256,256]
+
+        x = self.dropout(x)
+
+        for blk in self.blocks: # TransformerEncoderLayer
+            x = blk(x)
+        x = self.norm(x)        # 也还是保留原形状不变
+        '''
+        以上是transformer,接下来decoder
+        '''
+        if self.seq_pool:
+            x = torch.matmul(F.softmax(
+                self.attention_pool(x), dim=1).transpose(-1, -2), x)
+        else:
+            x = x[:, 0]
+        
+        x = x.unsqueeze(1)
+        x = self.conv_final(x)
+        return x
+    
+    @staticmethod
+    def init_weight(m):
+        if isinstance(m, nn.Linear):
+            nn.init.trunc_normal_(m.weight, std=0.1)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
+    @staticmethod
+    def sinusoidal_embedding(n_channels, dim):
+        '''
+        用sin,cos进行位置编码
+        '''
+        pe = torch.FloatTensor([[p / (10000 ** (2 * (i // 2) / dim)) for i in range(dim)]
+                                for p in range(n_channels)])
+        pe[:, 0::2] = torch.sin(pe[:, 0::2])
+        pe[:, 1::2] = torch.cos(pe[:, 1::2])
+        return pe.unsqueeze(0)
+    
+    
+class CXNOT(nn.Module):
+    def __init__(self,img_size,
+                 embedding_dim=256,
+                 n_input_channels=3,
+                 kernel_size=3,
+                 stride=1,
+                 padding=1,
+                 pooling_kernel_size=3,
+                 pooling_stride=2,
+                 pooling_padding=1,
+                 *args, **kwargs):
+        super(CXNOT, self).__init__()
+        
+        self.tokenizer = OnlyTransformerToken(sequence_length=256,
+                                            embedding_dim=embedding_dim,
+                                            img_size = img_size,
+                                            seq_pool=True,
+                                            features=None,
+                                            dropout=0.,
+                                            attention_dropout=0.1,
+                                            stochastic_depth=0.1,
+                                            *args, **kwargs)
+        
+    def forward(self,x):
+        x = self.tokenizer(x)
+        return x
+    
+
+def _cxnot(num_layers, num_heads, mlp_ratio, embedding_dim,
+            img_size,
+         kernel_size=3, stride=None, padding=None,
+         *args, **kwargs):
+    return CXNOT(
+                img_size = img_size,
+                num_layers=num_layers,
+                num_heads=num_heads,
+                mlp_ratio=mlp_ratio,
+                embedding_dim=embedding_dim,
+                kernel_size=kernel_size,
+                *args, **kwargs)
+
         
         
 class CxnTokenizer(nn.Module):
@@ -289,7 +440,7 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
             self.conv_up_12_1 = Conv2dReLUNoPooling(8,4,kernel_size=3,padding=1,
                 use_batchnorm=False,)
             self.final_output_0 = Conv2dFinal(4,4,kernel_size=7,padding=3,)
-            self.final_output_1 = Conv2dFinal(4,1,kernel_size=7,padding=3,)
+            self.final_output_1 = Conv2dFinal(4,1,kernel_size=3,padding=1,)
         else:
             self.upsampling = nn.UpsamplingBilinear2d(scale_factor=2)
             self.conv_up_768_64 = Conv2dReLUNoPooling(768,64,kernel_size=3,padding=1,
@@ -301,10 +452,10 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
             self.conv_up_12_1 = Conv2dReLUNoPooling(12,8,kernel_size=3,padding=1,
                 use_batchnorm=False,)
             self.final_output_0 = Conv2dFinal(8,8,kernel_size=7,padding=3,)
-            self.final_output_1 = Conv2dFinal(8,1,kernel_size=7,padding=3,)
+            self.final_output_1 = Conv2dFinal(8,1,kernel_size=3,padding=1,)
         
-        self.fc1 = nn.Linear(256*256*32,12)
-        self.fc2 = nn.Linear(12,1)
+        # self.fc1 = nn.Linear(256*256*32,12)
+        # self.fc2 = nn.Linear(12,1)
         self.apply(self.init_weight)
 
 
@@ -484,14 +635,32 @@ def cct_12(*args, **kwargs):
                 *args, **kwargs)
 
 
-def cct_24(*args, **kwargs):
-    return _cxncct(num_layers=24, num_heads=16, mlp_ratio=4, embedding_dim=1024,
+def cot_2(*args, **kwargs):   # 这里注意embedding_dim
+    return _cxnot(num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=256,
                 *args, **kwargs)
 
 
-def cct_32(*args, **kwargs):
-    return _cxncct(num_layers=32, num_heads=16, mlp_ratio=4, embedding_dim=1280,
+def cot_4(*args, **kwargs):
+    return _cxnot(num_layers=4, num_heads=2, mlp_ratio=1, embedding_dim=256,
                 *args, **kwargs)
 
 
+def cot_6(*args, **kwargs):
+    return _cxnot(num_layers=6, num_heads=4, mlp_ratio=2, embedding_dim=256,
+                *args, **kwargs)
+
+
+def cot_7(*args, **kwargs):
+    return _cxnot(num_layers=7, num_heads=4, mlp_ratio=2, embedding_dim=256,
+                *args, **kwargs)
+
+
+def cot_8(*args, **kwargs):
+    return _cxnot(num_layers=8, num_heads=4, mlp_ratio=2, embedding_dim=256,
+                *args, **kwargs)
+
+
+def cot_10(*args, **kwargs):
+    return _cxnot(num_layers=10, num_heads=8, mlp_ratio=3, embedding_dim=256,
+                *args, **kwargs)
 

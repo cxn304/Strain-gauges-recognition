@@ -72,7 +72,7 @@ def generate_img():
     X = np.arange(-3,3,6/N)
     Y = np.arange(-3,3,6/N)
     X,Y=np.meshgrid(X,Y)
-    for i in range(10): # 每种模式进行10次计算
+    for i in range(30): # 每种模式进行10次计算
         t=time.time()
         file_first_name = str(t*1000000)
         image_t = random.randint(5,10)**np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)

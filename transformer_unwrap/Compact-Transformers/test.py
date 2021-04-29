@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from src import cct as cct_models
+from utils.cxnData import cxnDataset
+from main import imagesc
 
 
 class Args_cxn():
@@ -16,15 +18,16 @@ class Args_cxn():
     def __init__(self):
         self.workers = 2
         self.data = 'DIR'
-        self.print_freq = 1
-        self.checkpoint_path='./drive/MyDrive/transformer_unwrap/checkpoint.pth'
-        self.epochs = 100
+        self.print_freq = 5
+        self.model = "cct_6"
+        self.checkpoint_path=\
+            "./drive/MyDrive/transformer_unwrap/before_cct6/contact_before_cct_6.pth"
+        self.epochs = 200
         self.warmup = 5
-        self.batch_size = 32
+        self.batch_size = 128
         self.lr = 0.0005
         self.weight_decay = 3e-2
         self.clip_grad_norm = 10
-        self.model = 'cct_2'
         self.positional_embedding = 'learnable' # choices=['learnable', 'sine', 'none']
         self.conv_layers = 2
         self.conv_size = 3
@@ -33,7 +36,8 @@ class Args_cxn():
         self.disable_aug = False
         self.gpu_id = 0
         self.no_cuda = False
-        self.add_all_features = True
+        self.add_all_features = False   # 是否在解码器中添加
+        self.RESUME = False
         
 
 img_size = 256
@@ -44,12 +48,32 @@ model = cct_models.__dict__[args.model](img_size=img_size,
                                         kernel_size=args.conv_size,
                                         patch_size=args.patch_size,
                                         add_all_features=args.add_all_features)
-checkpoint_path='./drive/MyDrive/transformer_unwrap/checkpoint.pth'
-checkpoint = torch.load(checkpoint_path)
+
+if (not args.no_cuda) and torch.cuda.is_available():
+          torch.cuda.set_device(args.gpu_id)
+          model.cuda(args.gpu_id)
+          
+          
+path_checkpoint = args.checkpoint_path
+if torch.cuda.is_available():
+  checkpoint = torch.load(path_checkpoint)
+else:
+  checkpoint = torch.load(path_checkpoint,map_location="cpu")
 model.load_state_dict(checkpoint['model_state_dict'])
-optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
-                                  weight_decay=args.weight_decay)
-optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-epoch = checkpoint['epoch']
-loss = checkpoint['loss']
+
+train_dataset = cxnDataset('./trainx/','./trainy/')
+
+train_loader = torch.utils.data.DataLoader(
+    train_dataset, batch_size=args.batch_size, shuffle=True,
+    num_workers=args.workers)
+model.eval()
+for i, (images, target) in enumerate(train_loader):
+    if i == 2:
+        break
+    if (not args.no_cuda) and torch.cuda.is_available():
+        images = images.cuda(args.gpu_id, non_blocking=True)
+        target = target.cuda(args.gpu_id, non_blocking=True)
+    output = model(images)
+    target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
+    imagesc(output,target,images)
 

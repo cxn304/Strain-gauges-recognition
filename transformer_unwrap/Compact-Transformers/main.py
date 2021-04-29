@@ -29,9 +29,9 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 5
-        self.model = "cct_10"
+        self.model = "cot_6"
         self.checkpoint_path=\
-            "./drive/MyDrive/transformer_unwrap/contact_before_cct_10.pth"
+            "./drive/MyDrive/transformer_unwrap/before_cct6/contact_before_cot_6.pth"
         self.epochs = 200
         self.warmup = 5
         self.batch_size = 128
@@ -46,7 +46,7 @@ class Args_cxn():
         self.disable_aug = False
         self.gpu_id = 0
         self.no_cuda = False
-        self.add_all_features = True   # 是否在解码器中添加
+        self.add_all_features = False   # 是否在解码器中添加
         self.RESUME = False
         
 
@@ -73,7 +73,7 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     
     
 def imagesc(image_t1,image_true1,image_wrap1):
-    plt.figure(figsize=(7, 18))
+    plt.figure(figsize=(12, 22))
     plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
     plt.axis('on')
     predict = []
@@ -99,19 +99,27 @@ def imagesc(image_t1,image_true1,image_wrap1):
             image_t = image_t.detach().numpy()
         predict.append(image_t)
     
+    xx = np.arange(256)
     for i in range(len(trues)):
-        ax = plt.subplot(8,3,3*i+1)
+        ax = plt.subplot(8,4,4*i+1)
         plt.imshow(predict[i])
         plt.colorbar(shrink=0.6)
-        ax.set_title('unwrap Mat predict')
-        ax = plt.subplot(8,3,3*i+2)
+        ax.set_title('Unwrap Mat Predict')
+        ax = plt.subplot(8,4,4*i+2)
         plt.imshow(trues[i])
         plt.colorbar(shrink=0.6)
-        ax.set_title('unwrap Mat true')
-        ax = plt.subplot(8,3,3*i+3)
+        ax.set_title('Unwrap Mat True')
+        ax = plt.subplot(8,4,4*i+3)
         plt.imshow(inputs[i])
         plt.colorbar(shrink=0.6)
-        ax.set_title('wraped Mat input')
+        ax.set_title('Wraped Mat Input')
+        ax = plt.subplot(8,4,4*i+4)
+        plt.ylabel('phase')
+        plt.xlabel('col')
+        plt.plot(xx, trues[i][128,:], color='green', label='True Unwrap')
+        plt.plot(xx, predict[i][128,:], color='red', label='Predict Unwrap')
+        plt.legend()
+        ax.set_title('Result of row 128')
     plt.show()
     
 
@@ -138,7 +146,7 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         output = model(images)
         target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
         loss = criterion(output, target)
-        
+        # imagesc(output.clone(),target.clone(),images.clone())
         # acc1 = accuracy(output, target)
         n += images.size(0)
         loss_val += float(loss.item() * images.size(0))
@@ -158,7 +166,7 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         
         if i == len(train_loader)-2:
             ioutput,itarget,iimages=output,target,images
-    imagesc(ioutput,itarget,iimages)
+    # imagesc(ioutput,itarget,iimages)
     return avg_loss
 
 
@@ -237,20 +245,20 @@ if __name__ == '__main__':
         train_dataset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers)
 
-    val_dataset = cxnDataset('./valx/','./valy/')
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=args.batch_size, shuffle=False,
-        num_workers=args.workers)
+    # val_dataset = cxnDataset('./valx/','./valy/')
+    # val_loader = torch.utils.data.DataLoader(
+    #     val_dataset,
+    #     batch_size=args.batch_size, shuffle=False,
+    #     num_workers=args.workers)
 
     print("Beginning training")
     time_begin = time()
     for epoch in range(start_epoch,args.epochs):
         adjust_learning_rate(optimizer, epoch, args)
         avg_loss = cls_train(train_loader, model, criterion, optimizer, epoch, args)
-        acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
-                            time_begin=time_begin)
-        best_acc1 = min(acc1, best_acc1)
+        # acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
+        #                     time_begin=time_begin)
+        # best_acc1 = min(acc1, best_acc1)
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
@@ -261,5 +269,5 @@ if __name__ == '__main__':
     total_mins = (time() - time_begin) / 60
     print(f'Script finished in {total_mins:.2f} minutes, '
           f'best top-1: {best_acc1:.2f}, '
-          f'final top-1: {acc1:.2f}')
+          )
     
