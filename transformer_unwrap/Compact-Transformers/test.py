@@ -65,7 +65,7 @@ train_dataset = cxnDataset('./trainx/','./trainy/')
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset, batch_size=args.batch_size, shuffle=True,
-    num_workers=args.workers)
+    num_workers=args.workers)   # 没有名字只有数据
 model.eval()
 for i, (images, target) in enumerate(train_loader):
     if i == 2:
@@ -75,5 +75,5 @@ for i, (images, target) in enumerate(train_loader):
         target = target.cuda(args.gpu_id, non_blocking=True)
     output = model(images)
     target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
-    imagesc(output,target,images)
+    imagesc(output,target,images,args)
 

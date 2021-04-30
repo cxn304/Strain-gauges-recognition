@@ -31,7 +31,7 @@ class Args_cxn():
         self.print_freq = 5
         self.model = "cot_6"
         self.checkpoint_path=\
-            "./drive/MyDrive/transformer_unwrap/before_cct6/contact_before_cot_6.pth"
+            "./drive/MyDrive/transformer_unwrap/cot6/contact_before_cot_6.pth"
         self.epochs = 200
         self.warmup = 5
         self.batch_size = 128
@@ -72,8 +72,8 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     plt.show()
     
     
-def imagesc(image_t1,image_true1,image_wrap1):
-    plt.figure(figsize=(12, 22))
+def imagesc(image_t1,image_true1,image_wrap1,args):
+    plt.figure(figsize=(14, 24))
     plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
     plt.axis('on')
     predict = []
@@ -146,7 +146,7 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         output = model(images)
         target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
         loss = criterion(output, target)
-        # imagesc(output.clone(),target.clone(),images.clone())
+        # imagesc(output.clone(),target.clone(),images.clone(),args)
         # acc1 = accuracy(output, target)
         n += images.size(0)
         loss_val += float(loss.item() * images.size(0))
@@ -166,7 +166,8 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         
         if i == len(train_loader)-2:
             ioutput,itarget,iimages=output,target,images
-    # imagesc(ioutput,itarget,iimages)
+    if epoch % 5 == 0:
+        imagesc(ioutput,itarget,iimages,args)
     return avg_loss
 
 
@@ -259,12 +260,13 @@ if __name__ == '__main__':
         # acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
         #                     time_begin=time_begin)
         # best_acc1 = min(acc1, best_acc1)
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss': avg_loss,
-            }, args.checkpoint_path)
+        if epoch % 4 == 0:
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': avg_loss,
+                }, args.checkpoint_path)
 
     total_mins = (time() - time_begin) / 60
     print(f'Script finished in {total_mins:.2f} minutes, '

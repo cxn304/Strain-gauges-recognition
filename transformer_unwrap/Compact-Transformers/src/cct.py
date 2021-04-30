@@ -126,7 +126,7 @@ class Conv2dTranpose(nn.Sequential):
         
 class OnlyTransformerToken(nn.Module):
     '''
-    仅仅采用transformer的模型,看看效果如何
+    仅仅采用transformer的模型,效果不太好
     '''
     def __init__(self,img_size,
                  seq_pool=True,
@@ -253,8 +253,10 @@ class CXNOT(nn.Module):
                                             attention_dropout=0.1,
                                             stochastic_depth=0.1,
                                             *args, **kwargs)
-        
+        self.conv_between_trans = Conv2dReLUNoPooling(1, 3, 3)
     def forward(self,x):
+        x = self.tokenizer(x)
+        x = self.conv_between_trans(x)
         x = self.tokenizer(x)
         return x
     
@@ -454,7 +456,7 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
             self.final_output_0 = Conv2dFinal(8,8,kernel_size=7,padding=3,)
             self.final_output_1 = Conv2dFinal(8,1,kernel_size=3,padding=1,)
         
-        # self.fc1 = nn.Linear(256*256*32,12)
+        # self.fc1 = nn.Linear(256*256*32,12)  # 之前的模型遇到错误就把这个搞回来
         # self.fc2 = nn.Linear(12,1)
         self.apply(self.init_weight)
 
