@@ -91,8 +91,8 @@ class Conv2dFinal(nn.Sequential):
             padding=padding,
             bias=not (use_batchnorm),
         )
-        #avgpool = nn.AvgPool2d((2, 2), stride=(1, 1))   # 最后加一个avgpool
-        super(Conv2dFinal, self).__init__(conv)
+        avgpool = nn.AdaptiveAvgPool2d(256)   # 最后加一个avgpool
+        super(Conv2dFinal, self).__init__(conv,avgpool)
         
         
 class Conv2dTranpose(nn.Sequential):
@@ -265,7 +265,8 @@ class CXNOT(nn.Module):
         self.conv_up_128_16 = Conv2dReLUNoPooling(128, 16, 3)
         self.conv_up_32_4 = Conv2dReLUNoPooling(32, 4, 3)
         self.conv_up_8_1 = Conv2dReLUNoPooling(8, 1, 3)
-        self.conv_final = Conv2dFinal(2, 1, 3)
+        self.conv_final_0 = Conv2dFinal(2, 4, 3)
+        self.conv_final_1 = Conv2dFinal(4, 1, 3)
 
     def forward(self,x):
         x = self.conv_first(x) # 一开始的3变1
@@ -295,7 +296,8 @@ class CXNOT(nn.Module):
         x = self.conv_up_8_1(x)
         x = self.upsampling(x)  # (1,256,256)
         x = torch.cat((attach_256, x), dim=1)
-        x = self.conv_final(x)
+        x = self.conv_final_0(x)
+        x = self.conv_final_1(x)
         
         return x
     
