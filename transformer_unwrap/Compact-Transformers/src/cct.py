@@ -35,16 +35,16 @@ class Conv2dReLU(nn.Sequential):
         )
         relu = nn.LeakyReLU(0.1,inplace=True)
         
-        maxpool = nn.MaxPool2d(kernel_size=2,stride=2)
+        avgpool = nn.AvgPool2d((2, 2), stride=(2, 2))
 
         bn = nn.BatchNorm2d(out_channels)
 
-        super(Conv2dReLU, self).__init__(conv, bn, relu,maxpool)
+        super(Conv2dReLU, self).__init__(conv, bn, relu,avgpool)
         
         
 class Conv2dReLUNoPooling(nn.Sequential):
     '''
-    无maxpooling
+    无avgpooling
     '''
     def __init__(
             self,
@@ -81,7 +81,7 @@ class Conv2dFinal(nn.Sequential):
             kernel_size,
             padding=1,
             stride=1,
-            use_batchnorm=True,
+            use_batchnorm=False,
     ):
         conv = nn.Conv2d(
             in_channels,
@@ -91,6 +91,7 @@ class Conv2dFinal(nn.Sequential):
             padding=padding,
             bias=not (use_batchnorm),
         )
+        #avgpool = nn.AvgPool2d((2, 2), stride=(1, 1))   # 最后加一个avgpool
         super(Conv2dFinal, self).__init__(conv)
         
         
@@ -126,7 +127,7 @@ class Conv2dTranpose(nn.Sequential):
         
 class OnlyTransformerToken(nn.Module):
     '''
-    仅仅采用transformer的模型,效果不太好
+    仅仅采用transformer的模型,input[n,3,256,256],output[n,1,256,256]
     '''
     def __init__(self,img_size,
                  seq_pool=True,
@@ -170,8 +171,7 @@ class OnlyTransformerToken(nn.Module):
         # 把12个TransformerEncoderLayer编入subModule中,当作一个block
         self.norm = nn.LayerNorm(embedding_dim)
         
-        self.conv1 = Conv2dReLUNoPooling(3,1,3)
-        self.conv_final = Conv2dFinal(1,1,3,1,1,False)
+        self.conv_final = Conv2dFinal(1,1,3)
         
         self.apply(self.init_weight)
         
@@ -185,7 +185,6 @@ class OnlyTransformerToken(nn.Module):
             cls_token = self.class_emb.expand(x.shape[0], -1, -1)
             x = torch.cat((cls_token, x), dim=1)
             
-        x = self.conv1(x)
         # 这里要加上clone以免出现反向传播时的错误
         x = x.clone().reshape(-1,self.sequence_length,self.sequence_length)
         if self.positional_emb is not None:
@@ -253,11 +252,51 @@ class CXNOT(nn.Module):
                                             attention_dropout=0.1,
                                             stochastic_depth=0.1,
                                             *args, **kwargs)
-        self.conv_between_trans = Conv2dReLUNoPooling(1, 3, 3)
+        self.conv_first = Conv2dReLUNoPooling(3,1,3)    # 先压成一个
+        self.conv_1_4 = Conv2dReLU(1, 4, 3) # 128
+        self.conv_4_16 = Conv2dReLU(4, 16, 3) # 64
+        self.conv_16_64 = Conv2dReLU(16, 64, 3) # 32
+        self.conv_64_256 = Conv2dReLU(64, 256, 3) # 16
+        self.conv_256_1024 = Conv2dReLU(256, 1024, 3) # 8
+        
+        self.upsampling = nn.UpsamplingBilinear2d(scale_factor=2)
+        self.conv_up_1024_256 = Conv2dReLUNoPooling(1024,256,3)
+        self.conv_up_512_64 = Conv2dReLUNoPooling(512, 64, 3)
+        self.conv_up_128_16 = Conv2dReLUNoPooling(128, 16, 3)
+        self.conv_up_32_4 = Conv2dReLUNoPooling(32, 4, 3)
+        self.conv_up_8_1 = Conv2dReLUNoPooling(8, 1, 3)
+        self.conv_final = Conv2dFinal(2, 1, 3)
+
     def forward(self,x):
-        x = self.tokenizer(x)
-        x = self.conv_between_trans(x)
-        x = self.tokenizer(x)
+        x = self.conv_first(x) # 一开始的3变1
+        attach_256 = self.tokenizer(x)
+        x = self.conv_1_4(x) # 128,128
+        attach_128 = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,4,128,128)
+        x = self.conv_4_16(x) # 64,64
+        attach_64 = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,16,64,64)
+        x = self.conv_16_64(x) # 32,32
+        attach_32 = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,64,32,32)
+        x = self.conv_64_256(x) # 16,16
+        attach_16 = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,256,16,16)
+        x = self.conv_256_1024(x) # 8,8
+        x = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,1024,8,8)
+        x = self.upsampling(x) # 16
+        x = self.conv_up_1024_256(x)
+        x = torch.cat((attach_16, x), dim=1)
+        x = self.conv_up_512_64(x)  # 64,16,16
+        x = self.upsampling(x)  # (64,32,32)
+        x = torch.cat((attach_32, x), dim=1)
+        x = self.conv_up_128_16(x) # (16,32,32)
+        x = self.upsampling(x)  # (16,64,64)
+        x = torch.cat((attach_64, x), dim=1)
+        x = self.conv_up_32_4(x)
+        x = self.upsampling(x)  # (4,128,128)
+        x = torch.cat((attach_128, x), dim=1)
+        x = self.conv_up_8_1(x)
+        x = self.upsampling(x)  # (1,256,256)
+        x = torch.cat((attach_256, x), dim=1)
+        x = self.conv_final(x)
+        
         return x
     
 
@@ -273,7 +312,7 @@ def _cxnot(num_layers, num_heads, mlp_ratio, embedding_dim,
                 embedding_dim=embedding_dim,
                 kernel_size=kernel_size,
                 *args, **kwargs)
-
+  
         
         
 class CxnTokenizer(nn.Module):

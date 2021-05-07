@@ -29,9 +29,9 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 5
-        self.model = "cot_6"
+        self.model = "cot_2"
         self.checkpoint_path=\
-            "./drive/MyDrive/transformer_unwrap/cot6/contact_before_cot_6.pth"
+            "./drive/MyDrive/transformer_unwrap/cot6/contact_before_cot_2.pth"
         self.epochs = 200
         self.warmup = 5
         self.batch_size = 128
