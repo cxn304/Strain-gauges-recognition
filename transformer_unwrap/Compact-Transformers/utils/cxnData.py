@@ -13,17 +13,17 @@ def test_generate_img():
     
     unwraped = []
     wrapped = []
-    
-    image_t = random.randint(5,10)*np.exp(-0.1*(X**2 + Y**2)) + X*np.random.rand(1) + Y*np.random.rand(1)
+    '''
+    image_t = random.randint(15,20)*np.exp(-0.1*(X**2 + Y**2)) + X*np.random.rand(1) + Y*np.random.rand(1)
     imagen_wrappedt = np.arctan2(np.sin(image_t), np.cos(image_t))
     unwraped.append(image_t)
     wrapped.append(imagen_wrappedt)
     
-    image_val = random.randint(5,10)*X * np.exp(-X**2-X**2) + X*np.random.rand(1) + Y*np.random.rand(1)
-    imagen_wrapped = np.arctan2(np.sin(image_val), np.cos(image_val))
-    unwraped.append(image_val)
-    wrapped.append(imagen_wrapped)
-    
+    image_t1 = random.randint(15,20)*X * np.exp(-X**2-X**2) + random.randint(5,15)*X*np.random.rand(1) + Y*np.random.rand(1)
+    imagen_wrappe_t1 = np.arctan2(np.sin(image_t1), np.cos(image_t1))
+    unwraped.append(image_t1)
+    wrapped.append(imagen_wrappe_t1)
+    '''
     image_t2 = random.randint(5,10)*(1-X/2+X**5+Y**3)*random.randint(5,10)*np.exp(-X ** 2 - Y ** 2)
     imagen_wrappe_t2 = np.arctan2(np.sin(image_t2), np.cos(image_t2))
     unwraped.append(image_t2)
@@ -44,15 +44,30 @@ def test_generate_img():
     unwraped.append(image_t5)
     wrapped.append(imagen_wrappe_t5)
     
-    plt.figure(figsize=(10, 8))
+    image_t6=random.randint(5,10)*X
+    imagen_wrappe_t6 = np.arctan2(np.sin(image_t6), np.cos(image_t6))  
+    unwraped.append(image_t6)
+    wrapped.append(imagen_wrappe_t6)
+    
+    image_t7=random.randint(5,10)*Y
+    imagen_wrappe_t7 = np.arctan2(np.sin(image_t7), np.cos(image_t7))  
+    unwraped.append(image_t7)
+    wrapped.append(imagen_wrappe_t7)
+    
+    image_t8=random.randint(5,10)*Y+random.randint(5,10)*X
+    imagen_wrappe_t8 = np.arctan2(np.sin(image_t8), np.cos(image_t8))  
+    unwraped.append(image_t8)
+    wrapped.append(imagen_wrappe_t8)
+    
+    plt.figure(figsize=(10, 10))
     plt.subplots_adjust(wspace =.5, hspace =.5) # 调整子图间距
   
     for i in range(len(wrapped)):
-        ax = plt.subplot(4,4,2*i+1)
+        ax = plt.subplot(5,4,2*i+1)
         plt.imshow(unwraped[i])
         plt.colorbar(shrink=0.9)
         ax.set_title('unwrap Mat')
-        ax = plt.subplot(4,4,2*i+2)
+        ax = plt.subplot(5,4,2*i+2)
         plt.imshow(wrapped[i])
         plt.colorbar(shrink=0.9)
         ax.set_title('wrapped Mat')
@@ -60,6 +75,9 @@ def test_generate_img():
 
 
 def generate_img():
+    '''
+    generate noise image
+    '''
     if not os.path.exists('./trainx'):
       os.makedirs('./trainx')
     if not os.path.exists('./trainy'):
@@ -75,7 +93,7 @@ def generate_img():
     for i in range(30): # 每种模式进行10次计算
         t=time.time()
         file_first_name = str(t*1000000)
-        image_t = random.randint(5,10)**np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
+        image_t = random.randint(10,20)**np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
         image_t1 = random.randint(5,10)*X * np.exp(-X**2-X**2) + random.randint(5,15)*X*np.random.rand(1) + Y*np.random.rand(1)
         image_t2 = random.randint(5,10)*(1-X/2+X**5+Y**3)*random.randint(5,10)*np.exp(-X ** 2 - Y ** 2)
         image_t3 = random.randint(5,10)*X*np.exp(-X**2-Y**2)
@@ -169,6 +187,31 @@ def generate_img():
             np.save('./valy/'+file_first_name+'_'+str(i)+'_'+str(round(noise_variance,2))+'.npy',np.float32(image_t1))
 
 
+def generate_aliasing_img():
+    '''
+    generate aliasing image
+    '''
+    unwraped = []
+    wrapped = []
+    if not os.path.exists('./trainx'):
+      os.makedirs('./trainx')
+    if not os.path.exists('./trainy'):
+      os.makedirs('./trainy')  
+    if not os.path.exists('./valx'):
+      os.makedirs('./valx')
+    if not os.path.exists('./valy'):
+      os.makedirs('./valy')
+    N = 256
+    X = np.arange(-3,3,6/N)
+    Y = np.arange(-3,3,6/N)
+    X,Y=np.meshgrid(X,Y)
+    
+    image_t2 = random.randint(5,10)*(1-X/2+X**5+Y**3)*random.randint(5,10)*np.exp(-X ** 2 - Y ** 2)
+    imagen_wrappe_t2 = np.arctan2(np.sin(image_t2), np.cos(image_t2))
+    unwraped.append(image_t2)
+    wrapped.append(imagen_wrappe_t2)
+
+
 class cxnDataset(Dataset):
     """
      image_files：wrap存放地址根路径
@@ -217,6 +260,8 @@ class cxnDataset(Dataset):
         # 返回图像的数量
         return len(self.image_files)
     
+    
+test_generate_img()
 # generate_img()
 # cxn = cxnDataset('./trainx/','./trainy/')
 # train_loader = torch.utils.data.DataLoader(
