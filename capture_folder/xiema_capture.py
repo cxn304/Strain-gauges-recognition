@@ -24,8 +24,8 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         self.imgcount = 0
         self.timer = QtCore.QTimer()
         self.slot_init()
-        self.cam0_white_exposure = 5500
-        self.cam1_white_exposure = 5500
+        self.cam0_white_exposure = 8000
+        self.cam1_white_exposure = 8000
         
         
     def slot_init(self):    # 这里有时候名称要改
@@ -42,8 +42,8 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
     def start_cap(self):
         self.cam0.open_device() # l
         self.cam1.open_device() # r
-        self.cam0.set_exposure(9000)
-        self.cam1.set_exposure(9000)
+        self.cam0.set_exposure(7000)
+        self.cam1.set_exposure(7000)
         self.img0 = xiapi.Image()
         self.img1 = xiapi.Image()
         self.cam0.start_acquisition()
@@ -193,11 +193,11 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         
     def show_Moire_imgs(self):
         '''
-        打开8幅条纹图像并逐次投影,投影后500ms进行双目拍摄
+        打开8x3幅条纹图像并逐次投影,投影后500ms进行双目拍摄
         '''
-        self.timer.stop()   # 此时停止以30帧每秒采集图像
-        self.cam0.set_exposure(9000)    # 投条纹图的曝光
-        self.cam1.set_exposure(9000)
+        #self.timer.stop()   # 此时停止以30帧每秒采集图像
+        self.cam0.set_exposure(7000)    # 投条纹图的曝光
+        self.cam1.set_exposure(7000)
         self.folder_name = str(math.floor(time.time()*10)) # 新建文件夹名字
         os.mkdir('./moire_img/'+self.folder_name)
         moire_img_index = 0
@@ -223,19 +223,20 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
                 # moire_img_index已经+1,说明等update_image执行完才执行singleShot
                 # 连续拍摄2张求平均以保证没有噪声
                 QtCore.QTimer.singleShot(500, lambda:self.capture_moire())
-                # QtCore.QTimer.singleShot(700, lambda:self.capture_moire())
+                QtCore.QTimer.singleShot(1000, lambda:self.capture_moire())
+                QtCore.QTimer.singleShot(1500, lambda:self.capture_moire())
                 moire_img_index += 1
             else:
                 ttimer.stop()
                 ttimer.deleteLater() # 清除自身
                 del self.moire_label # 成功删除此label
-                rate = int(1000.0 / self.frame_rate)
-                self.timer.start(rate)
+                #rate = int(1000.0 / self.frame_rate)
+                #self.timer.start(rate)
                 
      
         ttimer = QtCore.QTimer()
         ttimer.timeout.connect(update_image)
-        ttimer.start(1000)
+        ttimer.start(2000)  # 两秒拍一次
 
 
     def auto_cali(self):

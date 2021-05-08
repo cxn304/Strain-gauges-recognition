@@ -1,11 +1,11 @@
 clear
 close all
 %%
-%参数设置
+%参数设置,现在是3张图取平均
 imgDir='./moire_img/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-for iii = 4:len
+for iii = 1:len
     nowdir = [imgDir usefolders{iii} '/'];
     files = dir([nowdir,'*.','png']);
     imglen = length(files);
@@ -21,16 +21,20 @@ for iii = 4:len
         allfile{i} = files(i).name;
     end
     
-    lshizi=imread([nowdir,lfile{9}]); %  左图十字
-    lwu = imread([nowdir,lfile{10}]); %  左图无十字
-    [clx,cly,pixelsize] = find_cross_point(lshizi,lwu);
+    lshizi=uint8((double(imread([nowdir,lfile{25}]))+double(imread([nowdir,...
+        lfile{26}]))+double(imread([nowdir,lfile{27}])))/3); %  左图十字
+    lwu = uint8((double(imread([nowdir,lfile{28}]))+double(imread([nowdir,...
+        lfile{29}]))+double(imread([nowdir,lfile{30}])))/3); %  左图无十字
+    %[clx,cly,pixelsize] = find_cross_point(lshizi,lwu);
     figure
     imshow(lshizi)
     [clx,cly] = ginput(1);
     clx = int32(clx);
     cly = int32(cly);
-    rshizi=imread([nowdir,rfile{9}]);
-    rwu = imread([nowdir,rfile{10}]);
+    rshizi=uint8((double(imread([nowdir,rfile{25}]))+double(imread([nowdir,...
+        rfile{26}]))+double(imread([nowdir,rfile{27}])))/3);
+    rwu = uint8((double(imread([nowdir,rfile{28}]))+double(imread([nowdir,...
+        rfile{29}]))+double(imread([nowdir,rfile{30}])))/3);
     %     [crx,cry,~] = find_cross_point(rshizi,rwu);
     figure
     imshow(rshizi)
@@ -116,7 +120,9 @@ end
 function [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
     ,maskl,maskr,clx,cly,crx,cry)
 % 创建平均图像并返回十字中心坐标和计算区域掩膜
-if i<=2  % 前2步相移
+n=length(allfile);
+nn = int8(n/20);    % 同样的图有多少张
+if i<=2  % 前2图相移,'L\heng\','L\shu\'
     avepics(:,:,1) = imread([nowdir,allfile{4*(i-1)+1}]);
     avepics(:,:,2) = imread([nowdir,allfile{4*(i-1)+2}]);
     avepics(:,:,3) = imread([nowdir,allfile{4*(i-1)+3}]);
@@ -125,7 +131,7 @@ if i<=2  % 前2步相移
     zp=[clx,cly]; % zp表示十字中心
     sss=0;
     im_mask=maskl;
-else   % 最后2步相移
+else   % 最后2图相移,'R\heng\','R\shu\'
     avepics(:,:,1) = imread([nowdir,allfile{4*(i-1)+1+2}]);
     avepics(:,:,2) = imread([nowdir,allfile{4*(i-1)+2+2}]);
     avepics(:,:,3) = imread([nowdir,allfile{4*(i-1)+3+2}]);
@@ -139,7 +145,6 @@ end
 %%
 function [xx,yy,pixelsize] = find_cross_point(lshizi,lwu)
 % 自动识别十字叉中心点坐标
-% lwu(find(lwu>10)) = lwu(find(lwu>10))+7;    % 有待检验
 zuoshizitu = lwu-lshizi;    % 去除其余部分,只留下两个十字叉
 zuoshizitu=im2double(zuoshizitu);
 ymax=250;ymin=0;

@@ -43,7 +43,7 @@ n=1080;
 
 %% 十字架
 
-z=150*ones(1080,1920);
+z=200*ones(1080,1920);
 z(540:541,:)=0;
 z(:,960:961)=0;
 imagesc(z);
@@ -51,13 +51,13 @@ imagesc(z);
 z=uint8(z);
 imwrite(z,'./ycross.png');
 
-z=150*ones(1080,1920);
+z=200*ones(1080,1920);
 z=uint8(z);
 imwrite(z,'./z.png');
 %% 正弦分布
 m=1920;
 n=1080;
-T=4;
+T=16;
 k=4;
 for s=1:k
     I1=zeros(n,m);
@@ -66,11 +66,13 @@ for s=1:k
             I2(i,:)=127.5*(1+cos(2*pi*(i+T/k*(s-1)-n/2)/T));
     end
     I2=uint8(I2);
+    plot(I2(:,50))
     imwrite(I2,['./h' num2str(s) '.png']);
     for j=1:m
             I1(:,j)=127.5*(1+cos(2*pi*(j+T/k*(s-1)-m/2)/T));
     end
     I1=uint8(I1);
+    I1 = imresize(I1, 2, 'bicubic');
     imwrite(I1,['./v' num2str(s) '.png']);
 end
 
