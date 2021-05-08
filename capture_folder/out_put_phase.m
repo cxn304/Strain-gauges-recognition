@@ -48,7 +48,7 @@ for iii = 1:len
     for i=1:4  % 循环的是{'L\heng\','L\shu\','R\heng\','R\shu\'}
         [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
             ,maskl,maskr,clx,cly,crx,cry);
-        [phi,im_mag]=fourstepbasedphase(avepics,4); % phi与原图维度一致
+        [phi,im_mag]=fourstepbasedphase(avepics,4); % phi与原图维度一致,四步相移
         figure
         subplot(2,2,1)
         imagesc(phi)
@@ -121,21 +121,30 @@ function [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
     ,maskl,maskr,clx,cly,crx,cry)
 % 创建平均图像并返回十字中心坐标和计算区域掩膜
 n=length(allfile);
-nn = int8(n/20);    % 同样的图有多少张
+nn = (n/20);    % 同样的图有多少张
+avgs = {};
+for ii = 1:20
+    tmp = zeros(size(maskl));
+    for j = 1:nn
+        tmp = tmp+double(imread([nowdir,allfile{3*(ii-1)+j}]));
+    end
+    tmp = uint8(tmp/nn);
+    avgs{ii} = tmp;
+end
 if i<=2  % 前2图相移,'L\heng\','L\shu\'
-    avepics(:,:,1) = imread([nowdir,allfile{4*(i-1)+1}]);
-    avepics(:,:,2) = imread([nowdir,allfile{4*(i-1)+2}]);
-    avepics(:,:,3) = imread([nowdir,allfile{4*(i-1)+3}]);
-    avepics(:,:,4) = imread([nowdir,allfile{4*(i-1)+4}]);
+    avepics(:,:,1) = avgs{4*(i-1)+1};
+    avepics(:,:,2) = avgs{4*(i-1)+2};
+    avepics(:,:,3) = avgs{4*(i-1)+3};
+    avepics(:,:,4) = avgs{4*(i-1)+4};
     avepics=avepics.*maskl;
     zp=[clx,cly]; % zp表示十字中心
     sss=0;
     im_mask=maskl;
 else   % 最后2图相移,'R\heng\','R\shu\'
-    avepics(:,:,1) = imread([nowdir,allfile{4*(i-1)+1+2}]);
-    avepics(:,:,2) = imread([nowdir,allfile{4*(i-1)+2+2}]);
-    avepics(:,:,3) = imread([nowdir,allfile{4*(i-1)+3+2}]);
-    avepics(:,:,4) = imread([nowdir,allfile{4*(i-1)+4+2}]);
+    avepics(:,:,1) = avgs{4*(i-1)+1+2};
+    avepics(:,:,2) = avgs{4*(i-1)+2+2};
+    avepics(:,:,3) = avgs{4*(i-1)+3+2};
+    avepics(:,:,4) = avgs{4*(i-1)+4+2};
     avepics=avepics.*maskr;
     zp=[crx,cry];
     sss=1;
@@ -549,7 +558,7 @@ end
 cc=C(:,cloumnref);
 k=find(cc==1);
 rowref=k(fix(numel(k)/2));  % fix Round towards zero.numel返回数组中元素个数
-colref=cloumnref;
+colref=cloumnref;   % 相当于列的零点
 edl=cloumnref+2;
 unwrap=nan(dimx,dimy);
 unwrap(rowref,colref)=phi(rowref, colref);  % ?????
