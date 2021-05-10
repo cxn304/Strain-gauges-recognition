@@ -43,7 +43,7 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         self.cam0.open_device() # l
         self.cam1.open_device() # r
         self.cam0.set_exposure(7000)
-        self.cam1.set_exposure(7000)
+        self.cam1.set_exposure(8000)
         self.img0 = xiapi.Image()
         self.img1 = xiapi.Image()
         self.cam0.start_acquisition()
@@ -197,7 +197,7 @@ class Capture(QtWidgets.QMainWindow,Ui_MainWindow): # 这里名字要改
         '''
         #self.timer.stop()   # 此时停止以30帧每秒采集图像
         self.cam0.set_exposure(7000)    # 投条纹图的曝光
-        self.cam1.set_exposure(7000)
+        self.cam1.set_exposure(8000)
         self.folder_name = str(math.floor(time.time()*10)) # 新建文件夹名字
         os.mkdir('./moire_img/'+self.folder_name)
         moire_img_index = 0
