@@ -4,21 +4,13 @@ clc
 %% ****************
 N = 512;
 G = 2;
-phi0 = peaks(N)*G; %
-figure(1)
-surf(phi0,'FaceColor','interp', 'EdgeColor','none','FaceLighting','phong');
-camlight left, axis tight
-xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);zlabel('Phase/Radians','FontSize',14);%title('Initial Phase','FontSize',14)
-set(figure(1),'name','Initial Phase 3D','Numbertitle','off');
-phi = angle(exp(j*phi0));
-figure(2);
-imshow(phi,[]);
-xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);%title('Wrapped Phase','FontSize',14)
-set(figure(2),'name','Wrapped Phase','Numbertitle','off');
-axis on
 %% read files
-
-
+imgDir='./trainx_mat/';    %总文件夹
+usefolders = find_folders(imgDir);
+len = length(usefolders);
+wrapped_name = [imgDir usefolders{10}];
+phi = load(wrapped_name);
+phi = phi.data;
 %%
 [m,n] = size(phi);
 phidx=zeros(m,n);
@@ -63,3 +55,18 @@ surf(phi3,'FaceColor','interp', 'EdgeColor','none','FaceLighting','phong');
 camlight left, axis tight
 xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);zlabel('Phase/Radians','FontSize',14);%title('BLS Phase Unwrapping','FontSize',14)
 set(figure(5),'name','BLS Phase Unwrapping','Numbertitle','off');
+
+
+%%
+function [usefolders] = find_folders(dirs)
+% 解包folder
+folders = dir(dirs);
+usefolders = {};
+k=1;
+for i = 1:length(folders)
+    if ~isempty(strfind(folders(i).name,'16'))
+        usefolders{k}=folders(i).name;
+        k = k+1;
+    end
+end
+end
