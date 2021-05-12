@@ -4,13 +4,26 @@ clc
 %% ****************
 N = 512;
 G = 2;
+% phi0 = peaks(N)*G; %
+% figure(1)
+% surf(phi0,'FaceColor','interp', 'EdgeColor','none','FaceLighting','phong');
+% camlight left, axis tight
+% xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);zlabel('Phase/Radians','FontSize',14);%title('Initial Phase','FontSize',14)
+% set(figure(1),'name','Initial Phase 3D','Numbertitle','off');
+% phi = angle(exp(j*phi0));
+
 %% read files
-imgDir='./trainx_mat/';    %总文件夹
+imgDir='./trainx_mat_t1/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-wrapped_name = [imgDir usefolders{10}];
+wrapped_name = [imgDir usefolders{40}];
 phi = load(wrapped_name);
 phi = phi.data;
+figure(2);
+imshow(phi,[]);
+xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);%title('Wrapped Phase','FontSize',14)
+set(figure(2),'name','Wrapped Phase','Numbertitle','off');
+axis on
 %%
 [m,n] = size(phi);
 phidx=zeros(m,n);
