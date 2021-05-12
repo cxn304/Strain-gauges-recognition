@@ -29,10 +29,10 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 5
-        self.model = "cot_2"
+        self.model = "cot_4"
         self.checkpoint_path=\
-            "./drive/MyDrive/transformer_unwrap/cot6/contact_before_cot_2.pth"
-        self.epochs = 200
+            "./drive/MyDrive/transformer_unwrap/cxncot4/cot_4.pth"
+        self.epochs = 300
         self.warmup = 5
         self.batch_size = 128
         self.lr = 0.0005
@@ -47,7 +47,7 @@ class Args_cxn():
         self.gpu_id = 0
         self.no_cuda = False
         self.add_all_features = False   # 是否在解码器中添加
-        self.RESUME = False
+        self.RESUME = True
         
 
 def plot_3d_wrap(image_t,image_true,image_wrap):
@@ -73,12 +73,13 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     
     
 def imagesc(image_t1,image_true1,image_wrap1,args):
-    plt.figure(figsize=(14, 24))
+    plt.figure(figsize=(17, 24))
     plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
     plt.axis('on')
     predict = []
     trues = []
     inputs = []
+    error_2d = []
     for i in range(0,64,8):
         image_wrap=image_wrap1[i,0,:,:]
         if (not args.no_cuda) and torch.cuda.is_available():
@@ -98,28 +99,33 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
         else:
             image_t = image_t.detach().numpy()
         predict.append(image_t)
+        error_2d.append(image_t-image_true)
     
     xx = np.arange(256)
     for i in range(len(trues)):
-        ax = plt.subplot(8,4,4*i+1)
+        ax = plt.subplot(8,5,5*i+1)
         plt.imshow(predict[i])
         plt.colorbar(shrink=0.6)
         ax.set_title('Unwrap Mat Predict')
-        ax = plt.subplot(8,4,4*i+2)
+        ax = plt.subplot(8,5,5*i+2)
         plt.imshow(trues[i])
         plt.colorbar(shrink=0.6)
         ax.set_title('Unwrap Mat True')
-        ax = plt.subplot(8,4,4*i+3)
+        ax = plt.subplot(8,5,5*i+3)
         plt.imshow(inputs[i])
         plt.colorbar(shrink=0.6)
         ax.set_title('Wraped Mat Input')
-        ax = plt.subplot(8,4,4*i+4)
+        ax = plt.subplot(8,5,5*i+4)
         plt.ylabel('phase')
         plt.xlabel('col')
         plt.plot(xx, trues[i][128,:], color='green', label='True Unwrap')
         plt.plot(xx, predict[i][128,:], color='red', label='Predict Unwrap')
         plt.legend()
         ax.set_title('Result of row 128')
+        ax = plt.subplot(8,5,5*i+5)
+        plt.imshow(error_2d[i])
+        plt.colorbar(shrink=0.6)
+        ax.set_title('Full field error')
     plt.show()
     
 
@@ -260,7 +266,7 @@ if __name__ == '__main__':
         # acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
         #                     time_begin=time_begin)
         # best_acc1 = min(acc1, best_acc1)
-        if epoch % 4 == 0:
+        if epoch % 5 == 0:
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),

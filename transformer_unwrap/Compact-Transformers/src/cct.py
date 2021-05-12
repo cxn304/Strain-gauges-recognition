@@ -266,7 +266,7 @@ class CXNOT(nn.Module):
         self.conv_up_32_4 = Conv2dReLUNoPooling(32, 4, 3)
         self.conv_up_8_1 = Conv2dReLUNoPooling(8, 1, 3)
         self.conv_final_0 = Conv2dFinal(2, 4, 3)
-        self.conv_final_1 = Conv2dFinal(4, 1, 3)
+        self.conv_final_1 = nn.Conv2d(4, 1, 3,stride=1,padding=1)
 
     def forward(self,x):
         x = self.conv_first(x) # 一开始的3变1
