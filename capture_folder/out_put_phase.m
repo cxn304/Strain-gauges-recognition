@@ -2,7 +2,7 @@ clear
 close all
 %%
 %参数设置,现在是3张图取平均
-imgDir='./moire_img/';    %总文件夹
+imgDir='./roudian_image/0/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
 for iii = 1:len
@@ -70,13 +70,13 @@ for iii = 1:len
         % imagesc(A) 将矩阵A中的元素数值按大小转化为不同颜色，
         % 并在坐标轴对应位置处以这种颜色染色
         unwrap=goodscan(deri,thing_mask,phi,i,clx,cly,crx,cry);
-        A=~isnan(unwrap);
+%         A=~isnan(unwrap);
         % A=~isnan((0./fix(deri)+1).*mask);
-        se=strel('diamond',1);
-        A=(imdilate(A,se)-A).*thing_mask;
-        l=find(A(:)==1);
-        adjoin=nan(length(l)*5,1);
-        adjoin(1:length(l),1)=l;
+%         se=strel('diamond',1);
+%         A=(imdilate(A,se)-A).*thing_mask;
+%         l=find(A(:)==1);
+%         adjoin=nan(length(l)*5,1);
+%         adjoin(1:length(l),1)=l;
         %         phi=thing_mask.*phi;
         %         unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
         %         zhouqi(i)=unwrap(zp(1),zp(2))/pi;
@@ -85,7 +85,7 @@ for iii = 1:len
         imagesc(unwrap)
         text(.5,.5,{'unwrap'},...
             'FontSize',14,'HorizontalAlignment','center')
-        %         save(['unwrap' num2str(i)], 'unwrap');
+        save([nowdir 'unwrap' num2str(i)], 'unwrap');
     end
 end
 %%
@@ -119,7 +119,7 @@ end
 %%
 function [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
     ,maskl,maskr,clx,cly,crx,cry)
-% 创建平均图像并返回十字中心坐标和计算区域掩膜
+% 创建平均图像并返回十字中心坐标和计算区域掩膜,目前是3张图片求平均
 n=length(allfile);
 nn = (n/20);    % 同样的图有多少张
 avgs = {};

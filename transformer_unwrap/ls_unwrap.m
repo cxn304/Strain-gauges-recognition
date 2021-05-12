@@ -13,12 +13,17 @@ G = 2;
 % phi = angle(exp(j*phi0));
 
 %% read files
-imgDir='./trainx_mat_t1/';    %总文件夹
+imgDir='./trainx_mat_t3/';    %总文件夹
+real_Dir = './trainy_mat_t3/';
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-wrapped_name = [imgDir usefolders{40}];
+realfolders = find_folders(real_Dir);
+real_img_name = [real_Dir realfolders{10}];
+wrapped_name = [imgDir usefolders{10}];
 phi = load(wrapped_name);
 phi = phi.data;
+real_img = load(real_img_name);
+real_img = real_img.data;
 figure(2);
 imshow(phi,[]);
 xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);%title('Wrapped Phase','FontSize',14)
@@ -37,15 +42,15 @@ Rou3dy = zeros(m,n);
 Rou3dx(1:m-1,:) = phidx(2:m,:)-phidx(1:m-1,:);
 Rou3dy(:,1:n-1) = phidy(:,2:n)-phidy(:,1:n-1);
 Rou3 = Rou3dx + Rou3dy;
-figure(3);
-surf(Rou3,'FaceColor','interp', 'EdgeColor','none','FaceLighting','phong');
-camlight left, axis tight
-xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);zlabel('Phase/Radians','FontSize',14);%title('lou3','FontSize',14)
-set(figure(3),'name','R(x,y) 3D','Numbertitle','off');
-figure(4);
-imshow(Rou3,[]);
-xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);
-set(figure(4),'name','R(x,y) 2D','Numbertitle','off');
+% figure(3);
+% surf(Rou3,'FaceColor','interp', 'EdgeColor','none','FaceLighting','phong');
+% camlight left, axis tight
+% xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);zlabel('Phase/Radians','FontSize',14);%title('lou3','FontSize',14)
+% set(figure(3),'name','R(x,y) 3D','Numbertitle','off');
+% figure(4);
+% imshow(Rou3,[]);
+% xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);
+% set(figure(4),'name','R(x,y) 2D','Numbertitle','off');
 %% *******************************
 tic
 PP3 = dct2(Rou3);
@@ -62,6 +67,11 @@ phi3 = idct2(PH3);
 toc
 phi3 = phi3(1:m,1:n);
 
+figure(4);
+surf(real_img,'FaceColor','interp', 'EdgeColor','none','FaceLighting','phong');
+camlight left, axis tight
+xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);zlabel('Phase/Radians','FontSize',14);%title('BLS Phase Unwrapping','FontSize',14)
+set(figure(4),'name','Real image','Numbertitle','off');
 
 figure(5);
 surf(phi3,'FaceColor','interp', 'EdgeColor','none','FaceLighting','phong');
@@ -69,7 +79,13 @@ camlight left, axis tight
 xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);zlabel('Phase/Radians','FontSize',14);%title('BLS Phase Unwrapping','FontSize',14)
 set(figure(5),'name','BLS Phase Unwrapping','Numbertitle','off');
 
-
+row128 = phi3(128,:) - real_img(128,:);
+figure(6);
+plot(row128)
+error_hole = phi3-real_img;
+figure(7);
+imagesc(error_hole)
+colorbar
 %%
 function [usefolders] = find_folders(dirs)
 % 解包folder

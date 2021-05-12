@@ -2,7 +2,7 @@ clear all
 close all
 clc
 %% read files
-imgDir='./trainx_mat_t1/';    %总文件夹
+imgDir='./trainx_mat_t3/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
 wrapped_name = [imgDir usefolders{40}];
