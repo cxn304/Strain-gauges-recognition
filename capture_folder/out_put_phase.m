@@ -21,72 +21,72 @@ for iii = 1:len
         allfile{i} = files(i).name;
     end
     
-    lshizi=uint8((double(imread([nowdir,lfile{25}]))+double(imread([nowdir,...
-        lfile{26}]))+double(imread([nowdir,lfile{27}])))/3); %  左图十字
-    lwu = uint8((double(imread([nowdir,lfile{28}]))+double(imread([nowdir,...
-        lfile{29}]))+double(imread([nowdir,lfile{30}])))/3); %  左图无十字
-    %[clx,cly,pixelsize] = find_cross_point(lshizi,lwu);
-    figure
-    imshow(lshizi)
-    [clx,cly] = ginput(1);
-    clx = int32(clx);
-    cly = int32(cly);
-    rshizi=uint8((double(imread([nowdir,rfile{25}]))+double(imread([nowdir,...
-        rfile{26}]))+double(imread([nowdir,rfile{27}])))/3);
-    rwu = uint8((double(imread([nowdir,rfile{28}]))+double(imread([nowdir,...
-        rfile{29}]))+double(imread([nowdir,rfile{30}])))/3);
-    %     [crx,cry,~] = find_cross_point(rshizi,rwu);
-    figure
-    imshow(rshizi)
-    [crx,cry] = ginput(1);
-    crx = int32(crx);
-    cry = int32(cry);
-    [height,width] = size(lshizi);
+    if iii == 1     % 只要是0下面的所有文件夹,clx和cly都是一样的
+        lshizi=uint8((double(imread([nowdir,lfile{25}]))+double(imread([nowdir,...
+            lfile{26}]))+double(imread([nowdir,lfile{27}])))/3); %  左图十字
+        %     lwu = uint8((double(imread([nowdir,lfile{28}]))+double(imread([nowdir,...
+        %         lfile{29}]))+double(imread([nowdir,lfile{30}])))/3); %  左图无十字
+        %[clx,cly,pixelsize] = find_cross_point(lshizi,lwu);
+        figure
+        imshow(lshizi)
+        [clx,cly] = ginput(1);
+        clx = int32(clx);
+        cly = int32(cly);
+        rshizi=uint8((double(imread([nowdir,rfile{25}]))+double(imread([nowdir,...
+            rfile{26}]))+double(imread([nowdir,rfile{27}])))/3);
+        %     rwu = uint8((double(imread([nowdir,rfile{28}]))+double(imread([nowdir,...
+        %         rfile{29}]))+double(imread([nowdir,rfile{30}])))/3);
+        %     [crx,cry,~] = find_cross_point(rshizi,rwu);
+        figure
+        imshow(rshizi)
+        [crx,cry] = ginput(1);
+        crx = int32(crx);
+        cry = int32(cry);
+        [height,width] = size(lshizi);
+    end
     [maskl,maskr] = find_intersection_area(clx,cly,crx,cry,height,width);
     avepics = zeros(height,width,4);
     zhouqi=zeros(1,4);
+    close all
     for i=1:4  % 循环的是{'L\heng\','L\shu\','R\heng\','R\shu\'}
         [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
             ,maskl,maskr,clx,cly,crx,cry);
         [phi,im_mag]=fourstepbasedphase(avepics,4); % phi与原图维度一致,四步相移
-        figure
-        subplot(2,2,1)
-        imagesc(phi)
-        text(.5,.5,{'phi'},...
-            'FontSize',14,'HorizontalAlignment','center')
         if i == 1 || i == 3
             thing_mask = find_specie(phi);
         end
-        subplot(2,2,2)
-        imagesc(thing_mask)
-        text(.5,.5,{'thing_mask'},...
-            'FontSize',14,'HorizontalAlignment','center')
+        wrapped = phi.*thing_mask;
         % phi是解出来的相位
         [deri,~]=derical(phi,thing_mask,zp);
-        subplot(2,2,3)
-        imagesc(deri)
-        text(.5,.5,{'deri'},...
-            'FontSize',14,'HorizontalAlignment','center')
-        % imagesc(A) 将矩阵A中的元素数值按大小转化为不同颜色，
-        % 并在坐标轴对应位置处以这种颜色染色
         unwrap=goodscan(deri,thing_mask,phi,i,clx,cly,crx,cry);
-%         A=~isnan(unwrap);
-        % A=~isnan((0./fix(deri)+1).*mask);
-%         se=strel('diamond',1);
-%         A=(imdilate(A,se)-A).*thing_mask;
-%         l=find(A(:)==1);
-%         adjoin=nan(length(l)*5,1);
-%         adjoin(1:length(l),1)=l;
-        %         phi=thing_mask.*phi;
-        %         unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
-        %         zhouqi(i)=unwrap(zp(1),zp(2))/pi;
-        %         unwrap=unwrap-round(zhouqi(i))*pi;%横竖有关
-        subplot(2,2,4)
-        imagesc(unwrap)
-        text(.5,.5,{'unwrap'},...
-            'FontSize',14,'HorizontalAlignment','center')
+%         plot_image(phi,thing_mask,deri,unwrap);
         save([nowdir 'unwrap' num2str(i)], 'unwrap');
+        save([nowdir 'wrapped' num2str(i)], 'wrapped');
     end
+end
+%%
+function plot_image(phi,thing_mask,deri,unwrap)
+figure
+subplot(2,2,1)
+imagesc(phi)
+text(.5,.5,{'phi'},...
+    'FontSize',14,'HorizontalAlignment','center')
+
+subplot(2,2,2)
+imagesc(thing_mask)
+text(.5,.5,{'thing_mask'},...
+    'FontSize',14,'HorizontalAlignment','center')
+
+subplot(2,2,3)
+imagesc(deri)
+text(.5,.5,{'deri'},...
+    'FontSize',14,'HorizontalAlignment','center')
+% imagesc(A) 将矩阵A中的元素数值按大小转化为不同颜色，
+% 并在坐标轴对应位置处以这种颜色染色
+subplot(2,2,4)
+imagesc(unwrap)
+text(.5,.5,{'unwrap'},...
+    'FontSize',14,'HorizontalAlignment','center')
 end
 %%
 function img = find_specie(phi)

@@ -28,10 +28,10 @@ class Args_cxn():
     def __init__(self):
         self.workers = 2
         self.data = 'DIR'
-        self.print_freq = 5
+        self.print_freq = 10
         self.model = "cot_2"
         self.checkpoint_path=\
-            "./drive/MyDrive/transformer_unwrap/cxncot2/cot_2.pth"
+            "./drive/MyDrive/transformer_unwrap/ucxncot2/ucot_2_t4.pth"
         self.epochs = 300
         self.warmup = 5
         self.batch_size = 128
@@ -47,7 +47,7 @@ class Args_cxn():
         self.gpu_id = 0
         self.no_cuda = False
         self.add_all_features = False   # 是否在解码器中添加
-        self.RESUME = True
+        self.RESUME = False
         
 
 def plot_3d_wrap(image_t,image_true,image_wrap):
@@ -173,7 +173,7 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         
         if i == len(train_loader)-2:
             ioutput,itarget,iimages=output,target,images
-    if epoch % 5 == 0:
+    if epoch % 10 == 0:
         imagesc(ioutput,itarget,iimages,args)
     return avg_loss
 
@@ -267,7 +267,7 @@ if __name__ == '__main__':
         # acc1 = cls_validate(val_loader, model, criterion, args, epoch=epoch, 
         #                     time_begin=time_begin)
         # best_acc1 = min(acc1, best_acc1)
-        if epoch % 5 == 0:
+        if epoch>1 and epoch % 5 == 0:
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
