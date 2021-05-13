@@ -28,7 +28,7 @@ class Args_cxn():
     def __init__(self):
         self.workers = 2
         self.data = 'DIR'
-        self.print_freq = 10
+        self.print_freq = 40
         self.model = "cot_2"
         self.checkpoint_path=\
             "./drive/MyDrive/transformer_unwrap/ucxncot2/ucot_2_t4.pth"
@@ -74,7 +74,7 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     
 def imagesc(image_t1,image_true1,image_wrap1,args):
     jiange = 10
-    plt.figure(figsize=(17, 14))
+    plt.figure(figsize=(17, 13))
     plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
     plt.axis('on')
     predict = []

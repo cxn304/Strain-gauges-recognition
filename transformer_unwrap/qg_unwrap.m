@@ -3,11 +3,16 @@ close all
 clc
 %% read files
 imgDir='./trainx_mat_t3/';    %总文件夹
+real_Dir = './trainy_mat_t3/';
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-wrapped_name = [imgDir usefolders{40}];
+realfolders = find_folders(real_Dir);
+real_img_name = [real_Dir realfolders{31}];
+wrapped_name = [imgDir usefolders{31}];
 phi = load(wrapped_name);
 phi = phi.data;
+real_img = load(real_img_name);
+real_img = real_img.data;
 figure(2);
 imshow(phi,[]);
 xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);%title('Wrapped Phase','FontSize',14)
@@ -24,6 +29,14 @@ surf(unwrap,'FaceColor','interp', 'EdgeColor','none','FaceLighting','phong');
 camlight left, axis tight
 xlabel('X/Pixels','FontSize',14);ylabel('Y/Pixels','FontSize',14);zlabel('Phase/Radians','FontSize',14);%title('BLS Phase Unwrapping','FontSize',14)
 set(figure(5),'name','QG Phase Unwrapping','Numbertitle','off');
+
+row128 = unwrap(128,:) - real_img(128,:);
+figure(6);
+plot(row128)
+error_hole = unwrap-real_img;
+figure(7);
+imagesc(error_hole)
+colorbar
 %%
 function [usefolders] = find_folders(dirs)
 % 解包folder
