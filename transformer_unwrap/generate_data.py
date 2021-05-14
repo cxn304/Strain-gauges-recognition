@@ -19,7 +19,7 @@ def generate_img():
     X = np.arange(-3,3,6/N)
     Y = np.arange(-3,3,6/N)
     X,Y=np.meshgrid(X,Y)
-    for i in np.arange(9,11,1): # 每种模式进行10次计算
+    for i in np.arange(2,16,2): # 每种模式进行10次计算
         t=time.time()
         file_first_name = str(t*1000000)
         # image_t = i**np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
@@ -31,7 +31,7 @@ def generate_img():
         # image_t6=i*X
         image_t7=i*Y
         # image_t8=i*Y+i*X
-        for noise_variance in np.arange(0,0.4,0.01):
+        for noise_variance in np.arange(0,0.5,0.1):
             # image_noise = image_t+noise_variance*np.random.randn(N,N)
             # image_t_wrapped = np.arctan2(np.sin(image_noise), np.cos(image_noise))
             
@@ -45,7 +45,7 @@ def generate_img():
             
             # image_t3_noise = image_t3+noise_variance*np.random.randn(N,N)
             # image_t3_wrapped = np.arctan2(np.sin(image_t3_noise), 
-                                          # np.cos(image_t3_noise))
+            #                                np.cos(image_t3_noise))
             
             # image_t4_noise = image_t4+noise_variance*np.random.randn(N,N)
             # image_t4_wrapped = np.arctan2(np.sin(image_t4_noise), 
@@ -118,7 +118,7 @@ def generate_img():
 
 def npy_mat(npy_path,mat_path):
     if not os.path.exists(mat_path):
-      os.makedirs(mat_path)
+        os.makedirs(mat_path)
     npyname_path = os.listdir(npy_path)
     for npyname in npyname_path:
         name = npyname[:-4]
@@ -127,6 +127,6 @@ def npy_mat(npy_path,mat_path):
         npy = np.load(npy_path+'/'+npyname)
         io.savemat(mat_name,{'data':npy})
         
-# generate_img()
-# npy_mat('./trainx','./trainx_mat')
-# npy_mat('./trainy','./trainy_mat')
+generate_img()
+npy_mat('./trainx','./trainx_mat')
+npy_mat('./trainy','./trainy_mat')
