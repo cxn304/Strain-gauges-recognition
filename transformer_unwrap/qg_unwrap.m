@@ -1,7 +1,7 @@
 clear
 close all
 %% read files
-for i = 3:3
+for i = 7:7
     imgDir=['./trainx_mat_t' num2str(i) '/'];    % wrapped 文件夹
     realDir = ['./trainy_mat_t' num2str(i) '/']; % phase_unwrappedped 文件夹
     saveDir = ['./qg_data/image_t' num2str(i) '_qg/'];
