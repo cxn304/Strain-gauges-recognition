@@ -74,7 +74,7 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     
 def imagesc(image_t1,image_true1,image_wrap1,args):
     jiange = 10
-    plt.figure(figsize=(17, 13))
+    plt.figure(figsize=(17, 12))
     plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
     plt.axis('on')
     predict = []
@@ -124,7 +124,7 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
         plt.legend()
         ax.set_title('Result of row 128')
         ax = plt.subplot(4,5,5*i+5)
-        plt.imshow(error_2d[i])
+        plt.imshow(error_2d[i],vmin=-1, vmax=1)
         plt.colorbar(shrink=0.6)
         ax.set_title('Full field error')
     plt.show()

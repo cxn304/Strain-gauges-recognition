@@ -441,7 +441,8 @@ class CXNTransformerUnetWithNoOrigin(nn.Module):
             '''
             这里要注意,out的维度
             '''
-            self.attention_pool = nn.Linear(self.embedding_dim, 256) # (in,out)
+            self.attention_pool = nn.Linear(self.embedding_dim, 
+                                            self.embedding_dim) # (in,out)
 
         if positional_embedding != 'none':  # 如果要进行positional_embedding
             if positional_embedding == 'learnable':
