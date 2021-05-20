@@ -29,12 +29,15 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 40
-        self.model = "cot_2"
+        self.model = "cot_1024"
         self.checkpoint_path=\
-            "./drive/MyDrive/transformer_unwrap/ucxncot2/ucot_2_t4.pth"
+            "./drive/MyDrive/transformer_unwrap/cxncot1024/ucot_1024.pth"
+        self.trainx = './train_wrapped/'
+        self.trainy = './train_unwrap/'
         self.epochs = 300
         self.warmup = 5
-        self.batch_size = 128
+        self.batch_size = 10
+        self.img_size = 1024
         self.lr = 0.0005
         self.weight_decay = 3e-2
         self.clip_grad_norm = 10
@@ -73,7 +76,7 @@ def plot_3d_wrap(image_t,image_true,image_wrap):
     
     
 def imagesc(image_t1,image_true1,image_wrap1,args):
-    jiange = 10
+    jiange = 2
     plt.figure(figsize=(17, 12))
     plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
     plt.axis('on')
@@ -81,7 +84,7 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
     trues = []
     inputs = []
     error_2d = []
-    for i in range(0,40,jiange):
+    for i in range(0,8,jiange):
         image_wrap=image_wrap1[i,0,:,:]
         if (not args.no_cuda) and torch.cuda.is_available():
             image_wrap = image_wrap.detach().cpu().numpy()
@@ -102,7 +105,7 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
         predict.append(image_t)
         error_2d.append(image_t-image_true)
     
-    xx = np.arange(256)
+    xx = np.arange((predict[0].shape)[0])
     for i in range(len(trues)):
         ax = plt.subplot(4,5,5*i+1)
         plt.imshow(predict[i])
@@ -119,8 +122,8 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
         ax = plt.subplot(4,5,5*i+4)
         plt.ylabel('phase')
         plt.xlabel('col')
-        plt.plot(xx, trues[i][128,:], color='green', label='True Unwrap')
-        plt.plot(xx, predict[i][128,:], color='red', label='Predict Unwrap')
+        plt.plot(xx, trues[i][len(xx)//2,:], color='green', label='True Unwrap')
+        plt.plot(xx, predict[i][len(xx)//2,:], color='red', label='Predict Unwrap')
         plt.legend()
         ax.set_title('Result of row 128')
         ax = plt.subplot(4,5,5*i+5)
@@ -128,6 +131,7 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
         plt.colorbar(shrink=0.6)
         ax.set_title('Full field error')
     plt.show()
+    plt.close()
     
 
 def adjust_learning_rate(optimizer, epoch, args):
@@ -173,6 +177,7 @@ def cls_train(train_loader, model, criterion, optimizer, epoch, args):
         
         if i == len(train_loader)-2:
             ioutput,itarget,iimages=output,target,images
+        imagesc(output,target,images,args)
     if epoch % 10 == 0:
         imagesc(ioutput,itarget,iimages,args)
     return avg_loss
@@ -210,7 +215,7 @@ def cls_validate(val_loader, model, criterion, args, epoch=None, time_begin=None
 if __name__ == '__main__':
     args = Args_cxn()
     RESUME = args.RESUME
-    img_size = 256
+    img_size = args.img_size
     img_mean, img_std = [0.4914, 0.4822, 0.4465], [0.2470, 0.2435, 0.2616]
 
     model = cct_models.__dict__[args.model](img_size=img_size,
@@ -247,7 +252,7 @@ if __name__ == '__main__':
         
     normalize = [transforms.Normalize(mean=img_mean, std=img_std)]
     
-    train_dataset = cxnDataset('./trainx/','./trainy/')
+    train_dataset = cxnDataset(args.trainx,args.trainy)
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,

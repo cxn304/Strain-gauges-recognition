@@ -10,6 +10,8 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from src import cct as cct_models
 from utils.cxnData import cxnDataset
+import os,shutil,pdb
+import scipy.io as io
 
 
 def imagesc(image_t1,image_true1,image_wrap1,args):
@@ -42,7 +44,7 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
         predict.append(image_t)
         error_2d.append(image_t-image_true)
     
-    xx = np.arange(256)
+    xx = np.arange((predict[0].shape)[0])
     for i in range(len(trues)):
         ax = plt.subplot(4,5,5*i+1)
         plt.imshow(predict[i])
@@ -59,8 +61,10 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
         ax = plt.subplot(4,5,5*i+4)
         plt.ylabel('phase')
         plt.xlabel('col')
-        plt.plot(xx, trues[i][128,:], color='green', label='True Unwrap')
-        plt.plot(xx, predict[i][128,:], color='red', label='Predict Unwrap')
+        plt.plot(xx, trues[i][len(xx)//2,:], color='green',
+                 label='True Unwrap')
+        plt.plot(xx, predict[i][len(xx)//2,:], color='red', 
+                 label='Predict Unwrap')
         plt.legend()
         ax.set_title('Result of row 128')
         ax = plt.subplot(4,5,5*i+5)
@@ -68,6 +72,7 @@ def imagesc(image_t1,image_true1,image_wrap1,args):
         plt.colorbar(shrink=0.6)
         ax.set_title('Full field error')
     plt.show()
+    plt.close()
    
     
 
@@ -98,40 +103,90 @@ class Args_cxn():
         self.RESUME = False
         
 
-img_size = 256
-args = Args_cxn()
-model = cct_models.__dict__[args.model](img_size=img_size,
-                                        positional_embedding=args.positional_embedding,
-                                        n_conv_layers=args.conv_layers,
-                                        kernel_size=args.conv_size,
-                                        patch_size=args.patch_size,
-                                        add_all_features=args.add_all_features)
-
-if (not args.no_cuda) and torch.cuda.is_available():
-          torch.cuda.set_device(args.gpu_id)
-          model.cuda(args.gpu_id)
-          
-
-path_checkpoint = args.checkpoint_path
-if torch.cuda.is_available():
-  checkpoint = torch.load(path_checkpoint)
-else:
-  checkpoint = torch.load(path_checkpoint,map_location="cpu")
-model.load_state_dict(checkpoint['model_state_dict'])
-
-train_dataset = cxnDataset('./trainx/','./trainy/')
-
-train_loader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=args.batch_size, shuffle=False,
-    num_workers=args.workers)   # 没有名字只有数据
-model.eval()
-for i, (images, target) in enumerate(train_loader):
-    if i == 2:
-        break
+def tested():
+    img_size = 1024
+    args = Args_cxn()
+    model = cct_models.__dict__[args.model](img_size=img_size,
+                                            positional_embedding=args.positional_embedding,
+                                            n_conv_layers=args.conv_layers,
+                                            kernel_size=args.conv_size,
+                                            patch_size=args.patch_size,
+                                            add_all_features=args.add_all_features)
+    
     if (not args.no_cuda) and torch.cuda.is_available():
-        images = images.cuda(args.gpu_id, non_blocking=True)
-        target = target.cuda(args.gpu_id, non_blocking=True)
-    output = model(images)
-    target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
-    imagesc(output,target,images,args)
+              torch.cuda.set_device(args.gpu_id)
+              model.cuda(args.gpu_id)
+              
+    '''
+    path_checkpoint = args.checkpoint_path
+    if torch.cuda.is_available():
+      checkpoint = torch.load(path_checkpoint)
+    else:
+      checkpoint = torch.load(path_checkpoint,map_location="cpu")
+    model.load_state_dict(checkpoint['model_state_dict'])
+    '''
+    
+    train_dataset = cxnDataset('./train_wrapped/','./train_unwrap/')
+    
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=False,
+        num_workers=args.workers)   # 没有名字只有数据
+    # model.eval()
+    for i, (images, target) in enumerate(train_loader):
+        if i == 5:
+            break
+        imagesc(images,target,images,args)
+        '''
+        if (not args.no_cuda) and torch.cuda.is_available():
+            images = images.cuda(args.gpu_id, non_blocking=True)
+            target = target.cuda(args.gpu_id, non_blocking=True)
+        output = model(images)
+        target = target[:,0,:,:].unsqueeze(1)  # unsqueeze(1)增加个第1维
+        imagesc(output,target,images,args)
+        '''
+
+
+def generate_roudian_img():
+    if not os.path.exists('./train_wrapped'):
+      os.makedirs('./train_wrapped')
+    if not os.path.exists('./train_unwrap'):
+      os.makedirs('./train_unwrap')
+    wrappedDir = "./train_wrapped/"
+    unwrapDir = "./train_unwrap/"
+    originData = os.listdir("./roudianTrueImage/")
+    for dMoveUpDown in range(10,200,10):
+      for dMoveLeftRight in range(10,200,10):
+        for tmpName in originData:
+          matPath = "./roudianTrueImage/" + tmpName
+          tmpName = tmpName[:-4]
+          if tmpName[0] == 'u':
+            image_now = io.loadmat(matPath)['unwrap']
+            saveImageDir = unwrapDir+tmpName+'_'+str(dMoveUpDown)+'_'+str(dMoveLeftRight)+'.npy'
+          else:
+            image_now = io.loadmat(matPath)['wrapped']
+            saveImageDir = wrappedDir+tmpName+'_'+str(dMoveUpDown)+'_'+str(dMoveLeftRight)+'.npy'
+          image_new = np.zeros(image_now.shape)
+          image_new[:-dMoveUpDown,:-dMoveLeftRight]=image_now[dMoveUpDown-1:-1,dMoveLeftRight-1:-1]
+          image_new[np.isnan(image_new)]=0
+          plt.imshow(image_new)
+          plt.figure()
+          plt.plot(np.arange(len(image_new)),image_new[len(image_new)//2,:])
+          plt.figure()
+          plt.imshow(image_new[::2,::2])
+          plt.figure()
+          plt.plot(np.arange(len(image_new[::2,::2])),image_new[::2,::2][len(image_new[::2,::2])//2,:])
+          plt.figure()
+          plt.imshow(image_new[::4,::4])
+          plt.figure()
+          plt.plot(np.arange(len(image_new[::4,::4])),image_new[::4,::4][len(image_new[::4,::4])//2,:])
+          plt.show()
+          pdb.set_trace()
+          #np.save(saveImageDir,np.array(image_new, dtype="float32"))
+          
+        
+# generate_roudian_img()
+
+if __name__ == '__main__':
+    tested()
+
 

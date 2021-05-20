@@ -6,8 +6,8 @@ from .transformers import TransformerEncoderLayer
 
 
 __all__ = ['cct_2', 'cct_4', 'cct_6', 'cct_7', 'cct_8',
-           'cct_10', 'cct_12','cot_2', 'cot_4', 'cot_6', 'cot_7', 'cot_8',
-           'cot_10', 
+           'cct_10', 'cct_12','cot_2', 'cot_4', 'cot_6', 'cot_7', 'cot_512',
+           'cot_1024', 
            ]
 
 
@@ -79,6 +79,7 @@ class Conv2dFinal(nn.Sequential):
             in_channels,
             out_channels,
             kernel_size,
+            avg_pool_size=256,
             padding=1,
             stride=1,
             use_batchnorm=False,
@@ -91,7 +92,7 @@ class Conv2dFinal(nn.Sequential):
             padding=padding,
             bias=not (use_batchnorm),
         )
-        avgpool = nn.AdaptiveAvgPool2d(256)   # 最后加一个avgpool
+        avgpool = nn.AdaptiveAvgPool2d(avg_pool_size)   # 最后加一个avgpool
         super(Conv2dFinal, self).__init__(conv,avgpool)
         
         
@@ -151,9 +152,9 @@ class OnlyTransformerToken(nn.Module):
         self.sequence_length = sequence_length
         self.seq_pool = seq_pool
         
-        self.attention_pool = nn.Linear(self.embedding_dim, 256)
+        self.attention_pool = nn.Linear(self.embedding_dim, self.sequence_length)
         self.positional_emb = nn.Parameter(
-                    torch.zeros(1, sequence_length, embedding_dim),
+                    torch.zeros(1, self.embedding_dim, self.sequence_length),
                                                    requires_grad=True)
         # 词的长度后接embedding维度
         nn.init.trunc_normal_(self.positional_emb, std=0.2)
@@ -171,7 +172,7 @@ class OnlyTransformerToken(nn.Module):
         # 把12个TransformerEncoderLayer编入subModule中,当作一个block
         self.norm = nn.LayerNorm(embedding_dim)
         
-        self.conv_final = Conv2dFinal(1,1,3)
+        self.conv_final = Conv2dFinal(1,1,3,avg_pool_size=img_size)
         
         self.apply(self.init_weight)
         
@@ -243,8 +244,9 @@ class CXNOT(nn.Module):
                  *args, **kwargs):
         super(CXNOT, self).__init__()
         
-        self.tokenizer = OnlyTransformerToken(sequence_length=256,
-                                            embedding_dim=embedding_dim,
+        self.dim = embedding_dim
+        self.tokenizer = OnlyTransformerToken(sequence_length=self.dim,
+                                            embedding_dim=self.dim,
                                             img_size = img_size,
                                             seq_pool=True,
                                             features=None,
@@ -252,6 +254,7 @@ class CXNOT(nn.Module):
                                             attention_dropout=0.1,
                                             stochastic_depth=0.1,
                                             *args, **kwargs)
+        
         self.conv_first = Conv2dReLUNoPooling(3,1,3)    # 先压成一个
         self.conv_1_4 = Conv2dReLU(1, 4, 3) # 128
         self.conv_4_16 = Conv2dReLU(4, 16, 3) # 64
@@ -266,23 +269,28 @@ class CXNOT(nn.Module):
         self.conv_up_32_4 = Conv2dReLUNoPooling(32, 4, 3)
         self.conv_up_8_1 = Conv2dReLUNoPooling(8, 1, 3)
         self.conv_final_0 = Conv2dReLUNoPooling(2, 4, 3)
-        self.conv_final_1 = Conv2dFinal(4, 8, 3,stride=1,padding=1)
-        self.conv_final_2 = Conv2dFinal(8, 4, 3,stride=1,padding=1)
-        self.conv_final_3 = nn.Conv2d(4, 1, 3,stride=1,padding=1)
+        self.conv_final_1 = Conv2dFinal(4, 8, 3,avg_pool_size=self.dim)
+        self.conv_final_2 = Conv2dFinal(8, 4, 3,avg_pool_size=self.dim)
+        self.conv_final_3 = nn.Conv2d(4, 1, 3,padding=1,stride=1)
 
     def forward(self,x):
         x = self.conv_first(x) # 一开始的3变1
         attach_256 = self.tokenizer(x)
         x = self.conv_1_4(x) # 128,128
-        attach_128 = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,4,128,128)
+        attach_128 = self.tokenizer(x.reshape(
+            -1,1,self.dim,self.dim)).reshape(-1,4,self.dim//2,self.dim//2)
         x = self.conv_4_16(x) # 64,64
-        attach_64 = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,16,64,64)
+        attach_64 = self.tokenizer(x.reshape(
+            -1,1,self.dim,self.dim)).reshape(-1,16,self.dim//4,self.dim//4)
         x = self.conv_16_64(x) # 32,32
-        attach_32 = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,64,32,32)
+        attach_32 = self.tokenizer(x.reshape(
+            -1,1,self.dim,self.dim)).reshape(-1,64,self.dim//8,self.dim//8)
         x = self.conv_64_256(x) # 16,16
-        attach_16 = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,256,16,16)
+        attach_16 = self.tokenizer(x.reshape(
+            -1,1,self.dim,self.dim)).reshape(-1,256,self.dim//16,self.dim//16)
         x = self.conv_256_1024(x) # 8,8
-        x = self.tokenizer(x.reshape(-1,1,256,256)).reshape(-1,1024,8,8)
+        x = self.tokenizer(x.reshape(
+            -1,1,self.dim,self.dim)).reshape(-1,1024,self.dim//32,self.dim//32)
         x = self.upsampling(x) # 16
         x = self.conv_up_1024_256(x)
         x = torch.cat((attach_16, x), dim=1)
@@ -305,8 +313,7 @@ class CXNOT(nn.Module):
         return x
     
 
-def _cxnot(num_layers, num_heads, mlp_ratio, embedding_dim,
-            img_size,
+def _cxnot(num_layers, num_heads, mlp_ratio, embedding_dim,img_size,
          kernel_size=3, stride=None, padding=None,
          *args, **kwargs):
     return CXNOT(
@@ -702,12 +709,12 @@ def cot_7(*args, **kwargs):
                 *args, **kwargs)
 
 
-def cot_8(*args, **kwargs):
-    return _cxnot(num_layers=8, num_heads=4, mlp_ratio=2, embedding_dim=256,
+def cot_512(*args, **kwargs):
+    return _cxnot(num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=512,
                 *args, **kwargs)
 
 
-def cot_10(*args, **kwargs):
-    return _cxnot(num_layers=10, num_heads=8, mlp_ratio=3, embedding_dim=256,
+def cot_1024(*args, **kwargs):
+    return _cxnot(num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=1024,
                 *args, **kwargs)
 

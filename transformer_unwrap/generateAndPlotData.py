@@ -136,48 +136,53 @@ def file_filter(f):
         return False
     
     
-mainFolder = './ls_data/'
-t1_t8_folders = os.listdir(mainFolder)
-methods = t1_t8_folders[0].split('_')[-1]
-for folder in t1_t8_folders:
-    results = os.listdir(mainFolder+folder)
-    results = list(filter(file_filter, results))    # 论filter的用法
-    for unwrapName in results:
-        species = folder.split('_')[1]
-        matPath = mainFolder+folder+'/'+unwrapName
-        unwrappedPredict = io.loadmat(matPath)['phase_unwrapped']
-        trueUnwrapPath = './trainy_mat_'+species+'/'+unwrapName
-        wrappedPath = './trainx_mat_'+species+'/'+unwrapName
-        trueUnwrap = io.loadmat(trueUnwrapPath)['data']
-        wrappedData = io.loadmat(wrappedPath)['data']
-        xx = np.arange(256)
-        plt.figure(figsize=(17, 2.5))
-        plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
-        plt.axis('on')
-        ax = plt.subplot(1,5,1)
-        plt.imshow(unwrappedPredict)
-        plt.colorbar(shrink=0.6)
-        ax.set_title('Unwrap Mat Predict')
-        ax = plt.subplot(1,5,2)
-        plt.imshow(trueUnwrap)
-        plt.colorbar(shrink=0.6)
-        ax.set_title('Unwrap Mat True')
-        ax = plt.subplot(1,5,3)
-        plt.imshow(wrappedData)
-        plt.colorbar(shrink=0.6)
-        ax.set_title('Wraped Mat Input')
-        ax = plt.subplot(1,5,4)
-        plt.ylabel('phase')
-        plt.xlabel('col')
-        plt.plot(xx, trueUnwrap[128,:], color='green', label='True Unwrap')
-        plt.plot(xx, unwrappedPredict[128,:], color='red', label='Predict Unwrap')
-        plt.legend()
-        ax.set_title('Result of row 128')
-        ax = plt.subplot(1,5,5)
-        plt.imshow(unwrappedPredict-trueUnwrap,vmin=-1, vmax=1)
-        plt.colorbar(shrink=0.6)
-        ax.set_title('Full field error')
-        plt.show()
+def plot_lsqg_data():
+    mainFolder = './qg_data/'
+    saveFolder = './qg_plot/'
+    t1_t8_folders = os.listdir(mainFolder)
+    methods = t1_t8_folders[0].split('_')[-1]
+    for folder in t1_t8_folders:
+        results = os.listdir(mainFolder+folder)
+        results = list(filter(file_filter, results))    # 论filter的用法
+        for unwrapName in results:
+            species = folder.split('_')[1]
+            matPath = mainFolder+folder+'/'+unwrapName
+            unwrappedPredict = io.loadmat(matPath)['phase_unwrapped']
+            trueUnwrapPath = './trainy_mat_'+species+'/'+unwrapName
+            wrappedPath = './trainx_mat_'+species+'/'+unwrapName
+            trueUnwrap = io.loadmat(trueUnwrapPath)['data']
+            wrappedData = io.loadmat(wrappedPath)['data']
+            xx = np.arange(256)
+            plt.figure(figsize=(17, 2.2))
+            plt.subplots_adjust(wspace =.4, hspace =.4) # 调整子图间距
+            plt.axis('on')
+            ax = plt.subplot(1,5,1)
+            plt.imshow(unwrappedPredict)
+            plt.colorbar(shrink=0.6)
+            ax.set_title('Unwrap Mat Predict')
+            ax = plt.subplot(1,5,2)
+            plt.imshow(trueUnwrap)
+            plt.colorbar(shrink=0.6)
+            ax.set_title('Unwrap Mat True')
+            ax = plt.subplot(1,5,3)
+            plt.imshow(wrappedData)
+            plt.colorbar(shrink=0.6)
+            ax.set_title('Wraped Mat Input')
+            ax = plt.subplot(1,5,4)
+            plt.ylabel('phase')
+            plt.xlabel('col')
+            plt.plot(xx, trueUnwrap[128,:], color='green', label='True Unwrap')
+            plt.plot(xx, unwrappedPredict[128,:], color='red', label='Predict Unwrap')
+            plt.legend()
+            ax.set_title('Result of row 128')
+            ax = plt.subplot(1,5,5)
+            plt.imshow(unwrappedPredict-trueUnwrap,vmin=-1, vmax=1)
+            plt.colorbar(shrink=0.6)
+            ax.set_title('Full field error')
+            # plt.show()
+            save_png_name = saveFolder+unwrapName[:-4]+'.png'
+            plt.savefig(save_png_name, bbox_inches='tight')
+            plt.close()
 
         
 # generate_img()
