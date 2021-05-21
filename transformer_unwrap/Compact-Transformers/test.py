@@ -133,7 +133,7 @@ def tested():
         num_workers=args.workers)   # 没有名字只有数据
     # model.eval()
     for i, (images, target) in enumerate(train_loader):
-        if i == 5:
+        if i == 32:
             break
         imagesc(images,target,images,args)
         '''
