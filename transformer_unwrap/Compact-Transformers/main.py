@@ -29,15 +29,15 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 40
-        self.model = "cot_1024"
+        self.model = "cot_2"
         self.checkpoint_path=\
             "./drive/MyDrive/transformer_unwrap/cxncot1024/ucot_1024.pth"
-        self.trainx = './train_wrapped/'
-        self.trainy = './train_unwrap/'
+        self.trainx = './trainx/'
+        self.trainy = './trainy/'
         self.epochs = 300
         self.warmup = 5
-        self.batch_size = 10
-        self.img_size = 1024
+        self.batch_size = 128
+        self.img_size = 256
         self.lr = 0.0005
         self.weight_decay = 3e-2
         self.clip_grad_norm = 10

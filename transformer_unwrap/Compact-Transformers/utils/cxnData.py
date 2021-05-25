@@ -219,7 +219,7 @@ class cxnDataset(Dataset):
      augment：是否需要图像增强
      return: tuple: (x,y)
     """
-    def __init__(self, trainx_root, trainy_root, augment=None):
+    def __init__(self, trainx_root, trainy_root, mask_root = None,augment=None):
         # 这个list存放所有图像的地址
         self.image_files = np.array([x.path for x in os.scandir(trainx_root)
                                      if x.name.endswith(".npy") or
@@ -229,7 +229,12 @@ class cxnDataset(Dataset):
                                      if x.name.endswith(".npy") or
                                      x.name.endswith(".png") or 
                                      x.name.endswith(".JPG")])
+        self.mask_files = np.array([x.path for x in os.scandir(mask_root)
+                                     if x.name.endswith(".npy") or
+                                     x.name.endswith(".png") or 
+                                     x.name.endswith(".JPG")])
         self.augment = augment   # 是否需要图像增强
+        self.mask_root = mask_root # 是否需要mask
         
 
     def __getitem__(self, index):
@@ -238,11 +243,19 @@ class cxnDataset(Dataset):
           image = self.augment(image)  # 这里对图像进行了增强
           return self.to_tensor(image)      # 将读取到的图像变成tensor再传出
         else:
-          # 如果不进行增强，直接读取图像数据并返回
-          # 这里的open_image是读取图像函数，可以用PIL、opencv等库进行读取
-          img = self.to_tensor(self.open_image(self.image_files[index]))
-          label = self.to_tensor(self.open_image(self.label_files[index]))
-          return (img,label)    # 返回tuple形式的训练集
+            # 如果不进行增强，直接读取图像数据并返回
+            # 这里的open_image是读取图像函数，可以用PIL、opencv等库进行读取
+            if not self.mask_root:
+                img = self.to_tensor(self.open_image(self.image_files[index]))
+                label = self.to_tensor(self.open_image(self.label_files[index]))
+                return (img,label)    # 返回tuple形式的训练集
+            elif self.mask_root is not None:
+                img = self.to_tensor(self.open_image(self.image_files[index]))
+                label = self.to_tensor(self.open_image(self.label_files[index]))
+                mask = self.to_tensor(self.open_image(self.mask_files[index]))
+                return (img,label,mask)    # 返回tuple形式的训练集
+            
+            
 
     def open_image(self,name):
         img = np.load(name)
