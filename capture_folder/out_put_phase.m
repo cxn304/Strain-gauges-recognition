@@ -5,7 +5,7 @@ close all
 imgDir='./roudian_image/0/';    %×ÜÎÄ¼ş¼Ğ
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-for iii = 1:len
+for iii = 1:1
     nowdir = [imgDir usefolders{iii} '/'];
     files = dir([nowdir,'*.','png']);
     imglen = length(files);

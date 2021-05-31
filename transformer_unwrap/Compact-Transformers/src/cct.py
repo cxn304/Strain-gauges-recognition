@@ -242,6 +242,7 @@ class CXNOT(nn.Module):
         super(CXNOT, self).__init__()
         
         self.dim = embedding_dim
+
         self.tokenizer1 = OnlyTransformerToken(sequence_length=self.dim,
                                             embedding_dim=self.dim,
                                             img_size = img_size,
@@ -298,17 +299,27 @@ class CXNOT(nn.Module):
                                             *args, **kwargs)
         
         self.conv_first = Conv2dReLUNoPooling(3,1,3)    # 先压成一个
+        self.conv_first_after = Conv2dReLUNoPooling(1, 1, 3)
         self.conv_1_4 = Conv2dReLU(1, 4, 3) # 128
+        self.conv_1_4_after = Conv2dReLUNoPooling(4, 4, 3)
         self.conv_4_16 = Conv2dReLU(4, 16, 3) # 64
+        self.conv_4_16_after = Conv2dReLUNoPooling(16, 16, 3)
         self.conv_16_64 = Conv2dReLU(16, 64, 3) # 32
+        self.conv_16_64_after =Conv2dReLUNoPooling(64, 64, 3)
         self.conv_64_256 = Conv2dReLU(64, 256, 3) # 16
+        self.conv_64_256_after = Conv2dReLUNoPooling(256, 256, 3)
         self.conv_256_1024 = Conv2dReLU(256, 1024, 3) # 8
+        self.conv_256_1024_after = Conv2dReLUNoPooling(1024, 1024, 3)
         
         self.upsampling = nn.UpsamplingBilinear2d(scale_factor=2)
         self.conv_up_1024_256 = Conv2dReLUNoPooling(1024,256,3)
+        self.conv_up_1024_256_after = Conv2dReLUNoPooling(256, 256, 3)
         self.conv_up_512_64 = Conv2dReLUNoPooling(512, 64, 3)
+        self.conv_up_512_64_after = Conv2dReLUNoPooling(64, 64, 3)
         self.conv_up_128_16 = Conv2dReLUNoPooling(128, 16, 3)
+        self.conv_up_128_16_after = Conv2dReLUNoPooling(16, 16, 3)
         self.conv_up_32_4 = Conv2dReLUNoPooling(32, 4, 3)
+        self.conv_up_32_4_after = Conv2dReLUNoPooling(4, 4, 3)
         self.conv_up_8_1 = Conv2dReLUNoPooling(8, 1, 3)
         self.conv_final_0 = Conv2dReLUNoPooling(2, 4, 3)
         self.conv_final_1 = Conv2dFinal(4, 8, 3,avg_pool_size=self.dim)
@@ -318,31 +329,41 @@ class CXNOT(nn.Module):
     def forward(self,x):
         x = self.conv_first(x) # 一开始的3变1
         attach_256 = self.tokenizer1(x)
+        x = self.conv_first_after(x)
         x = self.conv_1_4(x) # 128,128
+        x = self.conv_1_4_after(x)
         attach_128 = self.tokenizer2(x.reshape(
             -1,1,self.dim,self.dim)).reshape(-1,4,self.dim//2,self.dim//2)
         x = self.conv_4_16(x) # 64,64
+        x = self.conv_4_16_after(x)
         attach_64 = self.tokenizer3(x.reshape(
             -1,1,self.dim,self.dim)).reshape(-1,16,self.dim//4,self.dim//4)
         x = self.conv_16_64(x) # 32,32
+        x = self.conv_16_64_after(x)
         attach_32 = self.tokenizer4(x.reshape(
             -1,1,self.dim,self.dim)).reshape(-1,64,self.dim//8,self.dim//8)
         x = self.conv_64_256(x) # 16,16
+        x = self.conv_64_256_after(x)
         attach_16 = self.tokenizer5(x.reshape(
             -1,1,self.dim,self.dim)).reshape(-1,256,self.dim//16,self.dim//16)
         x = self.conv_256_1024(x) # 8,8
+        x = self.conv_256_1024_after(x)
         x = self.tokenizer6(x.reshape(
             -1,1,self.dim,self.dim)).reshape(-1,1024,self.dim//32,self.dim//32)
         x = self.upsampling(x) # 16
         x = self.conv_up_1024_256(x)
+        x = self.conv_up_1024_256_after(x)
         x = torch.cat((attach_16, x), dim=1)
         x = self.conv_up_512_64(x)  # 64,16,16
+        x = self.conv_up_512_64_after(x)
         x = self.upsampling(x)  # (64,32,32)
         x = torch.cat((attach_32, x), dim=1)
         x = self.conv_up_128_16(x) # (16,32,32)
+        x = self.conv_up_128_16_after(x)
         x = self.upsampling(x)  # (16,64,64)
         x = torch.cat((attach_64, x), dim=1)
         x = self.conv_up_32_4(x)
+        x = self.conv_up_32_4_after(x)
         x = self.upsampling(x)  # (4,128,128)
         x = torch.cat((attach_128, x), dim=1)
         x = self.conv_up_8_1(x)

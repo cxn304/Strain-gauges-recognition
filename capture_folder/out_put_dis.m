@@ -1,5 +1,5 @@
 clear
-close all
+close all     % 这个是三维重建最后一步
 path='./calculate_dis/';%相位图地址
 load([path 'stereoParams'])
 %%
@@ -12,9 +12,9 @@ H2=IntrinsicMatrix_right*I2;  %得到转换矩阵(r1,r2,r3,T)
 H1=[IntrinsicMatrix_left,zeros(3,1)];
 kp=inv(IntrinsicMatrix_left);   % 左相机内参求逆
 %%
-xyzmapx=nan(1024,1280);
-xyzmapy=nan(1024,1280);
-xyzmapz=nan(1024,1280);
+xyzmapx=nan(1024,1024);
+xyzmapy=nan(1024,1024);
+xyzmapz=nan(1024,1024);
 vumatch=load([path 'vumatch.asc'],'-ascii');
 v1=vumatch(:,1);
 u1=vumatch(:,2);
