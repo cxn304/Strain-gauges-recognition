@@ -2,12 +2,12 @@ clear
 close all
 %%
 %参数设置,现在是3张图取平均
-load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16224483696\qn_mask.mat % 只是载入琴女的
-load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16224483696\qn_mask2.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227088416\david_l.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227088416\david_r.mat % 只是载入琴女的
 imgDir='./roudian_image/david/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-for iii = 4:4
+for iii = 1:1
     nowdir = [imgDir usefolders{iii} '/'];
     files = dir([nowdir,'*.','png']);
     imglen = length(files);
@@ -57,9 +57,9 @@ for iii = 4:4
             ,maskl,maskr,clx,cly,crx,cry);
         [phi,im_mag]=fourstepbasedphase(avepics,4); % phi与原图维度一致,四步相移
         if i == 1 || i == 2
-            thing_mask = qn_mask;
+            thing_mask = david_l;
         else
-            thing_mask = qn_mask2;
+            thing_mask = david_r;
         end
         
         wrapped = phi.*thing_mask;
@@ -558,9 +558,9 @@ mask(mask==0)=nan;
 phi=mask.*phi;%phi; area of quality==1
 C=~isnan(phi);%对非计算域进行膨胀操作，找出连通路径A4=imdilate(A3,se)
 if i<=2
-    cloumnref = clx-5;
+    cloumnref = clx-1;
 else
-    cloumnref = crx-5;
+    cloumnref = crx-1;
 end
 cc=C(:,cloumnref);
 k=find(cc==1);

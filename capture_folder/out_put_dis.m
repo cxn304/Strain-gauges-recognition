@@ -1,6 +1,6 @@
 clear
 close all     % 这个是三维重建最后一步
-path='./calculate_dis/qn/';%相位图地址
+path='./calculate_dis/david/';%相位图地址
 load([path 'stereoParams'])
 %%
 IntrinsicMatrix_left = stereoParams.CameraParameters1.IntrinsicMatrix';

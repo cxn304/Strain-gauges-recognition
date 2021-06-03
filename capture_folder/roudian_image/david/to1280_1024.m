@@ -1,7 +1,7 @@
 clear
 close all
 %% read files
-imgDir='./16224489993/';    %总文件夹
+imgDir='./16227118846/';    %总文件夹
 files = dir([imgDir,'*.','png']);
 mlen = length(files);
 for j = 1:mlen

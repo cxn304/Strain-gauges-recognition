@@ -1,5 +1,5 @@
 clear %得到相位图后匹配点像素坐标,三维重建中间步骤
-path='./calculate_dis/qn/';%相位图地址
+path='./calculate_dis/david/';%相位图地址
 
 %%
 
