@@ -2,10 +2,12 @@ clear
 close all
 %%
 %参数设置,现在是3张图取平均
-imgDir='./roudian_image/0/';    %总文件夹
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16224483696\qn_mask.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16224483696\qn_mask2.mat % 只是载入琴女的
+imgDir='./roudian_image/david/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-for iii = 1:1
+for iii = 4:4
     nowdir = [imgDir usefolders{iii} '/'];
     files = dir([nowdir,'*.','png']);
     imglen = length(files);
@@ -21,7 +23,7 @@ for iii = 1:1
         allfile{i} = files(i).name;
     end
     
-    if iii == 1     % 只要是0下面的所有文件夹,clx和cly都是一样的
+    if iii == iii     % 只要是0下面的所有文件夹,clx和cly都是一样的
         lshizi=uint8((double(imread([nowdir,lfile{25}]))+double(imread([nowdir,...
             lfile{26}]))+double(imread([nowdir,lfile{27}])))/3); %  左图十字
         %     lwu = uint8((double(imread([nowdir,lfile{28}]))+double(imread([nowdir,...
@@ -29,7 +31,8 @@ for iii = 1:1
         %[clx,cly,pixelsize] = find_cross_point(lshizi,lwu);
         figure
         imshow(lshizi)
-        [clx,cly] = ginput(1);
+        enableDefaultInteractivity(gca);
+        [clx,cly,b] = ginput(1);
         clx = int32(clx);
         cly = int32(cly);
         rshizi=uint8((double(imread([nowdir,rfile{25}]))+double(imread([nowdir,...
@@ -39,7 +42,8 @@ for iii = 1:1
         %     [crx,cry,~] = find_cross_point(rshizi,rwu);
         figure
         imshow(rshizi)
-        [crx,cry] = ginput(1);
+        enableDefaultInteractivity(gca);
+        [crx,cry,b] = ginput(1);
         crx = int32(crx);
         cry = int32(cry);
         [height,width] = size(lshizi);
@@ -52,14 +56,17 @@ for iii = 1:1
         [zp,im_mask,sss,avepics] = create_avgimg(nowdir,allfile,i,avepics...
             ,maskl,maskr,clx,cly,crx,cry);
         [phi,im_mag]=fourstepbasedphase(avepics,4); % phi与原图维度一致,四步相移
-        if i == 1 || i == 3
-            thing_mask = find_specie(phi);
+        if i == 1 || i == 2
+            thing_mask = qn_mask;
+        else
+            thing_mask = qn_mask2;
         end
+        
         wrapped = phi.*thing_mask;
         % phi是解出来的相位
         [deri,~]=derical(phi,thing_mask,zp);
         unwrap=goodscan(deri,thing_mask,phi,i,clx,cly,crx,cry);
-%         plot_image(phi,thing_mask,deri,unwrap);
+        plot_image(phi,thing_mask,deri,unwrap);
         save([nowdir 'unwrap' num2str(i)], 'unwrap');
         save([nowdir 'wrapped' num2str(i)], 'wrapped');
     end
@@ -551,9 +558,9 @@ mask(mask==0)=nan;
 phi=mask.*phi;%phi; area of quality==1
 C=~isnan(phi);%对非计算域进行膨胀操作，找出连通路径A4=imdilate(A3,se)
 if i<=2
-    cloumnref = clx;
+    cloumnref = clx-5;
 else
-    cloumnref = crx;
+    cloumnref = crx-5;
 end
 cc=C(:,cloumnref);
 k=find(cc==1);

@@ -390,6 +390,9 @@ def _cxnot(num_layers, num_heads, mlp_ratio, embedding_dim,img_size,
  
     
 class OTUCXN(nn.Module):
+    '''
+    only transformer
+    '''
     def __init__(self,img_size,
                  embedding_dim=256,
                  n_input_channels=3,
@@ -470,15 +473,15 @@ def cot_1024(*args, **kwargs):
 
 
 def otu_256(*args, **kwargs):   # 这里注意embedding_dim
-    return _otucxn(num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=256,
+    return _otucxn(num_layers=6, num_heads=4, mlp_ratio=1, embedding_dim=256,
                 *args, **kwargs)
 
 
 def otu_512(*args, **kwargs):   # 这里注意embedding_dim
-    return _otucxn(num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=512,
+    return _otucxn(num_layers=6, num_heads=4, mlp_ratio=1, embedding_dim=512,
                 *args, **kwargs)
 
 
 def otu_1024(*args, **kwargs):   # 这里注意embedding_dim
-    return _otucxn(num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=1024,
+    return _otucxn(num_layers=6, num_heads=4, mlp_ratio=1, embedding_dim=1024,
                 *args, **kwargs)

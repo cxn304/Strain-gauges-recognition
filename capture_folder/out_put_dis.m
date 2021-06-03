@@ -1,6 +1,6 @@
 clear
 close all     % 这个是三维重建最后一步
-path='./calculate_dis/';%相位图地址
+path='./calculate_dis/qn/';%相位图地址
 load([path 'stereoParams'])
 %%
 IntrinsicMatrix_left = stereoParams.CameraParameters1.IntrinsicMatrix';
@@ -36,10 +36,12 @@ xyz1=xyz';
 % save([calibpath 'xyzmapy.mat'],'xyzmapy');
 % save([calibpath 'xyzmapz.mat'],'xyzmapz');
 % save([calibpath 'xyzyes.asc'],'xyz','-ascii');
+xyzmapz = fillmissing(xyzmapz,'linear',2,'EndValues','nearest');
+xyzmapx = fillmissing(xyzmapx,'linear',2,'EndValues','nearest');
+xyzmapy = fillmissing(xyzmapy,'linear',2,'EndValues','nearest');
 
-
-
-
-
-
-
+a=nanmean(xyzmapz,'all');   % 异常值处理
+c=nanstd(xyzmapz,0,'all');
+xyzmapz(xyzmapz<a-3*c|xyzmapz>a+3*c)=nan;
+s=surfl(xyzmapx,xyzmapy,xyzmapz);
+s.EdgeColor='None';

@@ -96,9 +96,9 @@ def generate_img():
         # image_t = i**np.exp(-0.25*(X**2 + Y**2)) + 2*X*np.random.rand(1) + Y*np.random.rand(1)
         # image_t1 = i*X * np.exp(-X**2-X**2) + i*X*np.random.rand(1) + Y*np.random.rand(1)
         # image_t2 = i*(1-X/2+X**5+Y**3)*i*np.exp(-X ** 2 - Y ** 2)
-        # image_t3 = i*np.sin(X)+i*np.cos(Y)
+        image_t3 = i*np.sin(X)+i*np.cos(Y)
         # image_t4=i*Y*np.sin(X)-i*X*np.cos(Y)
-        image_t5=i*(1-X)**2*np.exp(-(X**2)-(Y+1)**2)-i*(X/5 - X**3 - Y**5)*np.exp(-X**2-Y**2)- 1/3*np.exp(-(X+1)**2 - Y**2)
+        # image_t5=i*(1-X)**2*np.exp(-(X**2)-(Y+1)**2)-i*(X/5 - X**3 - Y**5)*np.exp(-X**2-Y**2)- 1/3*np.exp(-(X+1)**2 - Y**2)
         # image_t6=i*X
         # image_t7=i*Y
         # image_t8=i*Y+i*X
@@ -114,17 +114,17 @@ def generate_img():
             # image_t2_wrapped = np.arctan2(np.sin(image_t2_noise), 
             #                               np.cos(image_t2_noise))
             
-            # image_t3_noise = image_t3+noise_variance*np.random.randn(N,N)
-            # image_t3_wrapped = np.arctan2(np.sin(image_t3_noise), 
-                                          # np.cos(image_t3_noise))
+            image_t3_noise = image_t3+noise_variance*np.random.randn(N,N)
+            image_t3_wrapped = np.arctan2(np.sin(image_t3_noise), 
+                                           np.cos(image_t3_noise))
             
             # image_t4_noise = image_t4+noise_variance*np.random.randn(N,N)
             # image_t4_wrapped = np.arctan2(np.sin(image_t4_noise), 
             #                               np.cos(image_t4_noise))
             
-            image_t5_noise = image_t5+noise_variance*np.random.randn(N,N)
-            image_t5_wrapped = np.arctan2(np.sin(image_t5_noise), 
-                                          np.cos(image_t5_noise))
+            # image_t5_noise = image_t5+noise_variance*np.random.randn(N,N)
+            # image_t5_wrapped = np.arctan2(np.sin(image_t5_noise), 
+            #                               np.cos(image_t5_noise))
             
             # image_t6_noise = image_t6+noise_variance*np.random.randn(N,N)
             # image_t6_wrapped = np.arctan2(np.sin(image_t6_noise), 
@@ -153,20 +153,20 @@ def generate_img():
             # np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
             #     round(noise_variance,2))+'t2.npy',np.float32(image_t2))
             
-            # np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
-            #     round(noise_variance,2))+'t3.npy',np.float32(image_t3_wrapped))
-            # np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
-            #     round(noise_variance,2))+'t3.npy',np.float32(image_t3))
+            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t3.npy',np.float32(image_t3_wrapped))
+            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+                round(noise_variance,2))+'t3.npy',np.float32(image_t3))
             
             # np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
             #     round(noise_variance,2))+'t4.npy',np.float32(image_t4_wrapped))
             # np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
             #     round(noise_variance,2))+'t4.npy',np.float32(image_t4))
             
-            np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
-                round(noise_variance,2))+'t5.npy',np.float32(image_t5_wrapped))
-            np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
-                round(noise_variance,2))+'t5.npy',np.float32(image_t5))
+            # np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
+            #     round(noise_variance,2))+'t5.npy',np.float32(image_t5_wrapped))
+            # np.save('./trainy/'+file_first_name+'_'+str(i)+'_'+str(
+            #     round(noise_variance,2))+'t5.npy',np.float32(image_t5))
             
             # np.save('./trainx/'+file_first_name+'_'+str(i)+'_'+str(
             #     round(noise_variance,2))+'t6.npy',np.float32(image_t6_wrapped))

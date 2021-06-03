@@ -29,7 +29,7 @@ class Args_cxn():
         self.workers = 2
         self.data = 'DIR'
         self.print_freq = 40
-        self.model = "cot_2"
+        self.model = "otu_256"
         self.checkpoint_path=\
             "./drive/MyDrive/transformer_unwrap/cxncot1024/ucot_1024.pth"
         self.trainx = './trainx/'

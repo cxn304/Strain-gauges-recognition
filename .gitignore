@@ -12,6 +12,7 @@ build/
 labels/
 cali_img/
 log/
+calculate_dis/
 internal_reference/
 develop-eggs/
 dist/
