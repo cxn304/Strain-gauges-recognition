@@ -66,6 +66,18 @@ for iii = 1:1
         % phi是解出来的相位
         [deri,~]=derical(phi,thing_mask,zp);
         unwrap=goodscan(deri,thing_mask,phi,i,clx,cly,crx,cry);
+        
+        A=~isnan(unwrap);
+        se=strel('diamond',1);
+        A=(imdilate(A,se)-A).*thing_mask;
+        l=find(A(:)==1);
+        adjoin=nan(length(l)*5,1);
+        adjoin(1:length(l),1)=l;
+        clear l A
+        thing_mask = double(thing_mask);
+        thing_mask(thing_mask==0)=nan;
+        phi=thing_mask.*phi;
+        unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
         plot_image(phi,thing_mask,deri,unwrap);
         save([nowdir 'unwrap' num2str(i)], 'unwrap');
         save([nowdir 'wrapped' num2str(i)], 'wrapped');

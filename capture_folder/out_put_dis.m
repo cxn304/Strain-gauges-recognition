@@ -45,3 +45,19 @@ c=nanstd(xyzmapz,0,'all');
 xyzmapz(xyzmapz<a-3*c|xyzmapz>a+3*c)=nan;
 s=surfl(xyzmapx,xyzmapy,xyzmapz);
 s.EdgeColor='None';
+
+function my_rmoutliers()
+data=xyzmapz;
+[m,n]=size(data);
+zhoubian = 7;
+for i = 15:m-15
+    for j=15:n-15
+        tmp = data(i-zhoubian:i+zhoubian,j-zhoubian:j+zhoubian);
+        tmp(isoutlier(tmp))=nan;
+        data(i-zhoubian:i+zhoubian,j-zhoubian:j+zhoubian) = tmp;
+    end
+end
+
+s=surfl(xyzmapx,xyzmapy,data);
+s.EdgeColor='None';
+end
