@@ -2,12 +2,12 @@ clear
 close all
 %%
 %参数设置,现在是3张图取平均
-load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227088416\david_l.mat % 只是载入琴女的
-load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227088416\david_r.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227101252\david_l.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227101252\david_r.mat % 只是载入琴女的
 imgDir='./roudian_image/david/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-for iii = 1:1
+for iii = 2:2
     nowdir = [imgDir usefolders{iii} '/'];
     files = dir([nowdir,'*.','png']);
     imglen = length(files);
@@ -78,6 +78,7 @@ for iii = 1:1
         thing_mask(thing_mask==0)=nan;
         phi=thing_mask.*phi;
         unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
+%         unwrap = wiener2(unwrap,[3 3]);     % 这个可能要删掉,自适应维纳滤波
         plot_image(phi,thing_mask,deri,unwrap);
         save([nowdir 'unwrap' num2str(i)], 'unwrap');
         save([nowdir 'wrapped' num2str(i)], 'wrapped');
