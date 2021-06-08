@@ -137,6 +137,10 @@ def file_filter(f):
     
     
 def plot_lsqg_data():
+    '''
+    读取ls和qg算出来的结果并储存到电脑
+
+    '''
     mainFolder = './qg_data/'
     saveFolder = './qg_plot/'
     t1_t8_folders = os.listdir(mainFolder)

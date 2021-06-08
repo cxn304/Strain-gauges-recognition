@@ -2,8 +2,8 @@ clear
 close all
 %%
 %参数设置,现在是3张图取平均
-load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227101252\david_l.mat % 只是载入琴女的
-load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227101252\david_r.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227101252\mask_l.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227101252\mask_r.mat % 只是载入琴女的
 imgDir='./roudian_image/david/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
@@ -57,9 +57,9 @@ for iii = 2:2
             ,maskl,maskr,clx,cly,crx,cry);
         [phi,im_mag]=fourstepbasedphase(avepics,4); % phi与原图维度一致,四步相移
         if i == 1 || i == 2
-            thing_mask = david_l;
+            thing_mask = mask_l;
         else
-            thing_mask = david_r;
+            thing_mask = mask_r;
         end
         
         wrapped = phi.*thing_mask;
@@ -76,6 +76,7 @@ for iii = 2:2
         clear l A
         thing_mask = double(thing_mask);
         thing_mask(thing_mask==0)=nan;
+        thing_mask(deri<0.90) =nan; % 质量太差就不计算了
         phi=thing_mask.*phi;
         unwrap=GuidedFloodFill3(phi, unwrap, adjoin ,deri);
 %         unwrap = wiener2(unwrap,[3 3]);     % 这个可能要删掉,自适应维纳滤波
@@ -571,9 +572,9 @@ mask(mask==0)=nan;
 phi=mask.*phi;%phi; area of quality==1
 C=~isnan(phi);%对非计算域进行膨胀操作，找出连通路径A4=imdilate(A3,se)
 if i<=2
-    cloumnref = clx-1;
+    cloumnref = clx;
 else
-    cloumnref = crx-1;
+    cloumnref = crx;
 end
 cc=C(:,cloumnref);
 k=find(cc==1);
@@ -674,3 +675,5 @@ elseif direction==1%'upwards'
 end
 return
 end
+
+
