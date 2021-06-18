@@ -24,6 +24,8 @@ for iii = 2:2
                 unwrap(row,:) = new_now_hl;
                 %  end
             end
+            imagesc(unwrap)
+            save(['unwrap' num2str(i)], 'unwrap')
         end
     end
 end
@@ -39,7 +41,7 @@ for test_no_nan = 1:1024
         no_nan = [no_nan test_no_nan];
     end
 end
-if length(no_nan)>300
+if length(no_nan)>100
     xt = no_nan(1):no_nan(end);
     new_now_hl = now_hl;
     pre_element = now_hl(xt(1));

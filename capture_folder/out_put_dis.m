@@ -1,5 +1,4 @@
 clear
-close all     % 这个是三维重建最后一步
 path='./calculate_dis/david/';%相位图地址
 load([path 'stereoParams'])
 %%
@@ -43,6 +42,7 @@ xyzmapy = fillmissing(xyzmapy,'linear',2,'EndValues','nearest');
 a=nanmean(xyzmapz,'all');   % 异常值处理
 c=nanstd(xyzmapz,0,'all');
 xyzmapz(xyzmapz<a-3*c|xyzmapz>a+3*c)=nan;
+figure
 s=surfl(xyzmapx,xyzmapy,xyzmapz);
 s.EdgeColor='None';
 

@@ -2,12 +2,12 @@ clear
 close all
 %%
 %参数设置,现在是3张图取平均
-load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227101252\mask_l.mat % 只是载入琴女的
-load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227101252\mask_r.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227223232\mask_l.mat % 只是载入琴女的
+load D:\cxn_project\Strain-gauges-recognition\capture_folder\roudian_image\david\16227223232\mask_r.mat % 只是载入琴女的
 imgDir='./roudian_image/david/';    %总文件夹
 usefolders = find_folders(imgDir);
 len = length(usefolders);
-for iii = 2:2
+for iii = 9:9
     nowdir = [imgDir usefolders{iii} '/'];
     files = dir([nowdir,'*.','png']);
     imglen = length(files);

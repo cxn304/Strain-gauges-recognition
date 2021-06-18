@@ -1,11 +1,12 @@
 clear %得到相位图后匹配点像素坐标,三维重建中间步骤
+close all
 path='./calculate_dis/david/';%相位图地址
 
 %%
 
 load([path 'unwrap2.mat']);
 % unwrap=unwrap+(0.2/255)*randn(size(unwrap));
-L_shu = unwrap;
+L_shu = unwrap; % unwrap
 load([path 'unwrap4.mat']);
 % unwrap=unwrap+(0.2/255)*randn(size(unwrap));
 R_shu = unwrap;
@@ -13,7 +14,7 @@ load([path 'unwrap1.mat']);
 % unwrap=unwrap+(0.2/255)*randn(size(unwrap));
 L_heng = unwrap;
 load([path 'unwrap3.mat']);
-% unwrap=unwrap+(0.2/255)*randn(size(unwrap));
+% unwrap=unwrap_512+(0.2/255)*randn(size(unwrap));
 R_heng = unwrap;
 
 sizeRhengpart=size(R_heng);
